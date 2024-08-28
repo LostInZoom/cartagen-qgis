@@ -6,6 +6,7 @@ import os
 import cartagen4py
 from PyQt5.QtGui import QIcon
 
+
 PLUGIN_ICON = QIcon(os.path.join(os.path.dirname(__file__), 'icons', 'icon.svg'))
 
 def classFactory(iface):
