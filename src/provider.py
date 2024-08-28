@@ -86,7 +86,7 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         string should be a unique, short, character only string, eg "qgis" or
         "gdal". This string should not be localised.
         """
-        return 'CartAGen4QGIS'
+        return 'CartAGen'
 
     def name(self):
         """
@@ -95,7 +95,7 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
 
         This string should be short (e.g. "Lastools") and localised.
         """
-        return self.tr('CartAGen4QGIS')
+        return self.tr('CartAGen')
 
     def icon(self):
         """
