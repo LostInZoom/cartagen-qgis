@@ -26,7 +26,7 @@ from qgis.core import QgsProcessing, QgsFeatureSink, QgsProcessingAlgorithm, Qgs
 from qgis.core import QgsProcessingParameterFeatureSource, QgsProcessingParameterFeatureSink, QgsProcessingParameterNumber
 
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4py import Squarer
+from cartagen import square_polygon_ls
 from shapely import Polygon
 from shapely.wkt import loads
 

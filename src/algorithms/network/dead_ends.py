@@ -45,8 +45,8 @@ from qgis.core import (
     QgsProcessingParameterDistance,
 )
 
-from cartagen4py.enrichment import detect_dead_ends
-from cartagen4py import eliminate_dead_ends
+from cartagen.enrichment import detect_dead_ends
+from cartagen import eliminate_dead_ends
 
 from cartagen4qgis import PLUGIN_ICON
 from cartagen4qgis.src.tools import *
@@ -201,7 +201,7 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
         
         # Actual algorithm
         dends = detect_dead_ends(gdf, o_faces)
-        dends = dends.fillna(9999)
+        #dends = dends.fillna(9999)
         #result = QgsVectorLayer(dends.to_json(),"mygeojson","ogr")
         
         dends = dends.to_dict('records')

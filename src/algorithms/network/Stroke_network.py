@@ -37,7 +37,7 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QVariant
 
-from cartagen4py import StrokeNetwork
+from cartagen.enrichment.network import strokes_roads
 
 from cartagen4qgis import PLUGIN_ICON
 from cartagen4qgis.src.tools import *
@@ -150,14 +150,19 @@ class BuildStrokes(QgsProcessingAlgorithm):
         deviat_sum = self.parameterAsDouble(parameters, self.DEVIAT_SUM, context)
 
         attr =  self.parameterAsFields(parameters, self.ATTRIBUTES_NAMES, context)
-        print(attr)
+        #print(attr)
         # Actual algorithm
-        sn=StrokeNetwork(gdf,attr)
 
-        sn.buildStrokes(attr, deviat_angle,deviat_sum)
-        array=sn.reconstruct_strokes()
-        gdf = geopandas.GeoDataFrame(array,  columns = ['id','geom',"section"],crs="epsg:2154",geometry="geom") 
-        gdf.rename_geometry('geometry', inplace=True)
+        gdf = strokes_roads(gdf, attr, angle=deviat_angle, angle_sum=deviat_sum)
+
+        # sn=StrokeNetwork(gdf,attr)
+
+        # sn.buildStrokes(attr, deviat_angle,deviat_sum)
+        # array=sn.reconstruct_strokes()
+        # gdf = geopandas.GeoDataFrame(array,  columns = ['id','geom',"section"],crs="epsg:2154",geometry="geom") 
+        # gdf.rename_geometry('geometry', inplace=True)
+
+
         # Converts the list of dicts to a list of qgis features
         #result = list_to_qgis_feature(roundabouts)
         

@@ -38,7 +38,7 @@ from qgis.core import (
 import geopandas
 import pandas
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4py import close_polygon
+from cartagen import close_polygon
 from cartagen4qgis.src.tools import *
 
 from shapely import Polygon
@@ -194,7 +194,7 @@ Parameters:
             cp.loc[i,'geometry'] = close_polygon(gdf.loc[i,"geometry"],size = size, quad_segs= quad_segs)
             
             res = cp.to_dict('records')
-            res = list_to_qgis_feature_2(res,source)
+            res = list_to_qgis_feature_2(res,source.fields())
      
         # features = []
         # fields = source.fields()

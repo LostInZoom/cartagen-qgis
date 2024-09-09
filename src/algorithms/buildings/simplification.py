@@ -26,7 +26,7 @@ from qgis.core import QgsProcessing, QgsFeatureSink, QgsProcessingAlgorithm, Qgs
 from qgis.core import QgsProcessingParameterFeatureSource, QgsProcessingParameterFeatureSink, QgsProcessingParameterNumber
 
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4py import simplify_building
+from cartagen import simplify_building
 from shapely.wkt import loads
 import math
 

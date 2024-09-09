@@ -32,6 +32,7 @@ from qgis.core import (
 from qgis.utils import iface
 from qgis.PyQt.QtCore import QVariant
 
+from qgis.PyQt.QtWidgets import QMessageBox
 
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
@@ -47,8 +48,8 @@ from qgis.core import (
     QgsProcessingParameterField
 )
 
-from cartagen4py.enrichment import detect_dual_carriageways
-from cartagen4py import collapse_dual_carriageways
+from cartagen.enrichment import detect_dual_carriageways
+from cartagen import collapse_dual_carriageways
 
 from cartagen4qgis import PLUGIN_ICON
 from cartagen4qgis.src.tools import *
@@ -320,12 +321,12 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
         dc = detect_dual_carriageways(gdf, importance = importance, value = value, concavity = concavity,
         elongation = elongation, compactness = compactness, area = area, width = width, huber = huber)
         
-        try:
-            dc = dc.to_dict('records')
+        #try:
+        dc = dc.to_dict('records')
             # gdf_final = gpd.GeoDataFrame(dc, crs = source.sourceCrs().authid())
             # layer_final = QgsVectorLayer(gdf_final.to_json())
-        except AttributeError:
-            raise Exception("No dual cariageways detected, try changing parameters")
+        # except AttributeError:
+        #     raise Exception("No dual cariageways detected, try changing parameters")
             # result = QgsFeature() 
 
             # dc = [{'area':None,'perimeter':None, 'concavity':None,'elongation':None,'compactness':None,'length':None,'width':None,'huber':None,'cid':None,'geometry':None}]
@@ -365,8 +366,27 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
         #     feature.setGeometry(geom)
                 
         #     features.append(feature)
+        
+        if len(dc) == 0:
+            fields = QgsFields()
+            fields.append(QgsField("area", QVariant.Double))
+            fields.append(QgsField("perimeter", QVariant.Double))
+            fields.append(QgsField("concavity", QVariant.Double))
+            fields.append(QgsField("elongation", QVariant.Double))
+            fields.append(QgsField("compactness", QVariant.Double))
+            fields.append(QgsField("length", QVariant.Double))
+            fields.append(QgsField("width", QVariant.Double))
+            fields.append(QgsField("huber", QVariant.Double))
+            fields.append(QgsField("cid",  QVariant.Int))
+            
+            res = [QgsFeature(fields)]
 
-        res = list_to_qgis_feature(dc) 
+            QMessageBox.warning(None, "Warning", "No dual carriageways detected, output layer is empty.")
+
+        else:    
+            gdf_final = gpd.GeoDataFrame(dc, crs = source.sourceCrs().authid())
+            res = gdf_final.to_dict('records')
+            res = list_to_qgis_feature(res)
 
         (sink, dest_id) = self.parameterAsSink(
                 parameters, self.OUTPUT, context,
@@ -561,6 +581,8 @@ class CollapseDualCarriageways(QgsProcessingAlgorithm):
         dc = qgis_source_to_geodataframe(dc)
 
         sigma = self.parameterAsDouble(parameters, self.SIGMA, context)
+        if sigma == 0:
+            sigma = None
         attr =  self.parameterAsFields(parameters, self.PROPAGATE_ATTRIBUTES, context)
 
         cllpsed = collapse_dual_carriageways(gdf, dc, sigma=sigma, propagate_attributes=['importance'])
@@ -587,32 +609,32 @@ class CollapseDualCarriageways(QgsProcessingAlgorithm):
         # Créer une liste de QgsFeature
         features = []
         
-        fields = source.fields()
+        res = list_to_qgis_feature_2(cllpsed,source.fields())
 
 
-        for entity in cllpsed:
-            feature = QgsFeature()
-            feature.setFields(fields)
-            for i in range(len(fields)):
-                # if entity[fields[i].name()] != entity[fields[i].name()]:
-                #     entity[fields[i].name()] = None
+        # for entity in cllpsed:
+        #     feature = QgsFeature()
+        #     feature.setFields(fields)
+        #     for i in range(len(fields)):
+        #         # if entity[fields[i].name()] != entity[fields[i].name()]:
+        #         #     entity[fields[i].name()] = None
                 
                
-                #     except:
-                #         entity[fields[i].name()] = True|feature.setAttribute(fields[i].name(), entity[fields[i].name()])    
-                # # if isinstance(entity[fields[i].name()], QDateTime):
-                #     if entity[fields[i].name()] == str('nan'):
-                #         print('ici')
-                #         entity[fields[i].name()] = 0 
+        #         #     except:
+        #         #         entity[fields[i].name()] = True|feature.setAttribute(fields[i].name(), entity[fields[i].name()])    
+        #         # # if isinstance(entity[fields[i].name()], QDateTime):
+        #         #     if entity[fields[i].name()] == str('nan'):
+        #         #         print('ici')
+        #         #         entity[fields[i].name()] = 0 
                 
-                feature.setAttribute(fields[i].name(), entity[fields[i].name()])
+        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
             
-            geom = QgsGeometry.fromWkt(str(entity['geometry']))
-            feature.setGeometry(geom)
+        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
+        #     feature.setGeometry(geom)
                 
-            features.append(feature)
+        #     features.append(feature)
             
-        sink.addFeatures(features, QgsFeatureSink.FastInsert)       
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)       
 
         return {
             self.OUTPUT: dest_id

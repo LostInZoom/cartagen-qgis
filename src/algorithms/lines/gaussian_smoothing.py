@@ -38,7 +38,7 @@ from qgis.core import (
 import geopandas
 import pandas
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4py import gaussian_smoothing
+from cartagen import gaussian_smoothing
 from cartagen4qgis.src.tools import *
 
 from shapely import Polygon
@@ -202,15 +202,15 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
         if source.wkbType().name == 'Polygon':
             gs = gdf.copy()
             for i in range(len(gdf)):
-                try:
-                    gs.loc[i,'geometry'] = gaussian_smoothing(list(gs.geometry.exterior)[i], sigma= sigma, sample= sample, densify = densify)
-                except:
-                    gs.loc[i,'geometry'] = gs.loc[i,'geometry'].exterior 
+                #try:
+                gs.loc[i,'geometry'] = gaussian_smoothing(list(gs.geometry)[i], sigma= sigma, sample= sample, densify = densify)
+                # except:
+                #     gs.loc[i,'geometry'] = gs.loc[i,'geometry'] 
                 
-                gs.loc[i,'geometry'] = Polygon(gs.loc[i,'geometry'])
+                #gs.loc[i,'geometry'] = Polygon(gs.loc[i,'geometry'])
 
             res = gs.to_dict('records')
-            res = list_to_qgis_feature_2(res,source)
+            res = list_to_qgis_feature_2(res,source.fields())
 
         else:
             gs = gdf.copy()
@@ -221,7 +221,7 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
                     gs.loc[i,'geometry'] = gs.loc[i,'geometry']
             
             res = gs.to_dict('records')
-            res = list_to_qgis_feature_2(res,source)
+            res = list_to_qgis_feature_2(res,source.fields())
 
      
         # features = []

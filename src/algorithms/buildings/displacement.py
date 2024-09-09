@@ -37,7 +37,7 @@ from qgis.core import (
 
 import geopandas
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4py import random_displacement, partition_networks
+from cartagen import random_displacement, partition_networks
 from cartagen4qgis.src.tools import *
 
 from shapely import Polygon

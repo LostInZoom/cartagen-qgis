@@ -38,7 +38,7 @@ from qgis.core import (
 import geopandas
 import pandas
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4py import douglas_peucker
+from cartagen import douglas_peucker
 from cartagen4qgis.src.tools import *
 
 from shapely import Polygon

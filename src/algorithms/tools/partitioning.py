@@ -37,7 +37,7 @@ from qgis.core import (
 )
 
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4py.utils import network_faces
+from cartagen.utils import network_faces
 from shapely import Polygon
 from shapely.wkt import loads
 

@@ -36,9 +36,9 @@ from qgis.core import (
 )
 from qgis.PyQt.QtWidgets import QMessageBox
 
-from cartagen4py.utils.partitioning import *
-from cartagen4py.enrichment import is_roundabout
-from cartagen4py import collapse_roundabouts
+from cartagen.utils.partitioning import *
+from cartagen.enrichment.network import is_roundabout
+from cartagen import collapse_roundabouts
 
 from cartagen4qgis import PLUGIN_ICON
 from cartagen4qgis.src.tools import *
@@ -445,7 +445,7 @@ class CollapseRoundaboutsQGIS(QgsProcessingAlgorithm):
         cllpsed = cllpsed.to_dict('records')
 
         # Converts the list of dicts to a list of qgis features
-        result = list_to_qgis_feature(cllpsed)
+        result = list_to_qgis_feature_2(cllpsed,source.fields())
         sink.addFeatures(result, QgsFeatureSink.FastInsert)
 
         # # Add a feature in the sink

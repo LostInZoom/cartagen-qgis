@@ -37,7 +37,9 @@ from qgis.core import (
 
 from qgis.PyQt.QtCore import QVariant, QDateTime
 
-from cartagen4py import detect_branching_crossroads, collapse_branching_crossroads
+from qgis.PyQt.QtWidgets import QMessageBox
+
+from cartagen import detect_branching_crossroads, collapse_branching_crossroads
 
 from cartagen4qgis import PLUGIN_ICON
 from cartagen4qgis.src.tools import *
@@ -288,14 +290,29 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
 
         br = detect_branching_crossroads(gdf, area_threshold = area_thrshld, maximum_distance_area = max_dist_area, 
                                               allow_middle_node = allow_mid_node, middle_angle_tolerance = mid_angle_tolerance, allow_single_4degree_node = allow_4degree)
-        
-        try:
-            br = br.to_dict('records')
+       
+        br = br.to_dict('records')
+
+        if len(br) == 0:
+           
+            fields = QgsFields()
+            fields.append(QgsField("distance_area", QVariant.Double))
+            fields.append(QgsField("cid",  QVariant.Int))
+            fields.append(QgsField("middle",  QVariant.Int))
+            fields.append(QgsField("roundabout",  QVariant.Int))
+            fields.append(QgsField("type",  QVariant.String))
+
+            res = [QgsFeature(fields)]
+
+            QMessageBox.warning(None, "Warning", "No branching crossroads detected, output layer is empty.")
+
+        else:    
+            gdf_final = gpd.GeoDataFrame(br, crs = source.sourceCrs().authid())
+            res = gdf_final.to_dict('records')
             res = list_to_qgis_feature(br)
             # gdf_final = gpd.GeoDataFrame(br, crs = source.sourceCrs().authid())
             # layer_final = QgsVectorLayer(gdf_final.to_json())
-        except AttributeError: 
-            raise Exception("No branching crossroads were detected. Try changing parameters")
+       
             #br = [{'roundabout':None,'middle':None, 'type':None,'distance_area':None,'cid':None,'geometry':None}]
             #{'geometry': loads('POLYGON ((483096.7768934701 6044753.445705255, 483092.1604210931 6044760.958789463, 483097.4000118249 6044763.99210823, 483096.7768934701 6044753.445705255))'), 'roundabout': -1, 'middle': -1, 'type': '3 nodes single 4 degree', 'distance_area': 0.06479616236533992, 'cid': 0}
             #res = list_to_qgis_feature(br)

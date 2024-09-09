@@ -10,7 +10,7 @@ version=0.1
 author=Guillaume Touya, Justin Berli
 email=guillaume.touya@ign.fr
 
-about=Provide cartographic generalization algorithms from the cartagen4py python library.
+about=Provide cartographic generalization algorithms from the cartagen python library.
 
 tracker=http://bugs
 repository=http://repo

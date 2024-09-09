@@ -38,7 +38,7 @@ from qgis.core import (
 import geopandas
 import pandas
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4py import boffet_areas, partition_networks
+from cartagen import boffet_areas, partition_networks
 from cartagen4qgis.src.tools import *
 
 from shapely import Polygon

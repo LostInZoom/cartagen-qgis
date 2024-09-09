@@ -34,7 +34,7 @@ from qgis.core import (QgsProcessing,
 		      QgsProcessingException)
 
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4py import visvalingam_whyatt, raposo
+from cartagen import visvalingam_whyatt, raposo
 from shapely.wkt import loads
 
 class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
