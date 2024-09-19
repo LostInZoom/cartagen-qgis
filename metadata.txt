@@ -23,13 +23,12 @@ hasProcessingProvider=yes
 # changelog=
 
 # Tags are comma separated with spaces allowed
-tags=python
+tags=python,generalisation,cartography
 
-homepage=https://cartagen.readthedocs.io/en/latest/index.html#
-category=Analysis
-icon=icon.png
+homepage=https://cartagen.readthedocs.io/en/latest/
+icon=cartagen.png
 # experimental flag
-experimental=True
+experimental=False
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False
@@ -44,4 +43,3 @@ category=Vector
 
 # If the plugin can run on QGIS Server.
 server=False
-

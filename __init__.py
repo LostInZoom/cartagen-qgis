@@ -3,7 +3,7 @@ __date__ = '2023-05-11'
 __copyright__ = '(C) 2023 by Guillaume Touya, Justin Berli'
 
 import os
-import cartagen
+import cartagen4qgis.cartagen
 from PyQt5.QtGui import QIcon
 
 
