@@ -13,9 +13,9 @@
  ***************************************************************************/
 """
 
-__author__ = 'Guillaume Touya, Justin Berli'
+__author__ = 'Guillaume Touya, Justin Berli, Paul Bourcier'
 __date__ = '2023-05-11'
-__copyright__ = '(C) 2023 by Guillaume Touya, Justin Berli'
+__copyright__ = '(C) 2023 by Guillaume Touya, Justin Berli, Paul Bourcier'
 
 # This will get replaced with a git SHA1 when you do a git archive
 
