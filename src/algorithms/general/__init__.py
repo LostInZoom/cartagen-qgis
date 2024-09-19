@@ -1,1 +1,1 @@
-from .constraint import ConstraintMethodQGIS
+from .constraint import LeastSquaresMethod

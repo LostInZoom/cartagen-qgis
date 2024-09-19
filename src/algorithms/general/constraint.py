@@ -39,7 +39,7 @@ from qgis.core import (
 
 import geopandas
 from cartagen4qgis import PLUGIN_ICON
-from cartagen import ConstraintMethod
+from cartagen import LeastSquaresMethod
 from shapely import Polygon
 from shapely.wkt import loads
 
