@@ -16,5 +16,5 @@ def classFactory(iface):
     :param iface: A QGIS interface instance.
     :type iface: QgsInterface
     """
-    from .cartagen4qgis import CartAGen4QGISPlugin
+    from .cartagenplugin import CartAGen4QGISPlugin
     return CartAGen4QGISPlugin()
