@@ -282,6 +282,15 @@ class SquaringQGIS(QgsProcessingAlgorithm):
         """
         return PLUGIN_ICON
 
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        return self.tr("to be completed")
+        
+    
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
 

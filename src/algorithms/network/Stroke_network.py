@@ -134,6 +134,7 @@ class BuildStrokes(QgsProcessingAlgorithm):
         records = gdf.to_dict('records')
         count = len(records)
 
+        feedback.setProgress(1)
         # # Define the output sink
         # (sink, dest_id) = self.parameterAsSink(
         #     parameters, self.OUTPUT, context,
@@ -154,7 +155,7 @@ class BuildStrokes(QgsProcessingAlgorithm):
         # Actual algorithm
 
         gdf = strokes_roads(gdf, attr, angle=deviat_angle, angle_sum=deviat_sum)
-
+        feedback.setProgress(95)
         # sn=StrokeNetwork(gdf,attr)
 
         # sn.buildStrokes(attr, deviat_angle,deviat_sum)
@@ -203,7 +204,7 @@ class BuildStrokes(QgsProcessingAlgorithm):
         )
         
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
-
+        feedback.setProgress(100)
         return {
             self.OUTPUT: dest_id
         }
@@ -248,7 +249,7 @@ class BuildStrokes(QgsProcessingAlgorithm):
         should provide a basic description about what the algorithm does and the
         parameters and outputs associated with it..
         """
-        return self.tr("This method computes the strokes in a Strokenetwork using a loop on network features, and updates its strokes attribute.\nAttributeNames : list of attribute names to be used as a criteria for continuity.\nDeviatAngle : threshold for the maximum angle between two segments at the junction of two sections belonging to the same stroke.\nDeviatSum : thresholds for the maximum angle between two sections belonging to the same stroke.")
+        return self.tr("This method computes the strokes in a Stroke network using a loop on network features, and updates its strokes attribute.\nAttributeNames : list of attribute names to be used as a criteria for continuity.\nDeviatAngle : threshold for the maximum angle between two segments at the junction of two sections belonging to the same stroke.\nDeviatSum : thresholds for the maximum angle between two sections belonging to the same stroke.")
         
     def icon(self):
         """

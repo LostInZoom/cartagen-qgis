@@ -161,7 +161,7 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
         should provide a basic description about what the algorithm does and the
         parameters and outputs associated with it..
         """
-        return self.tr("Detect dual carriageways based on geometric properties.\nThis algorithm proposed by Touya detects the network faces as road separator (*i.e.* separation betweendual carriageways) when the polygon meets the geometric requirements. Those values can be tweaked to fine-tune the detection, but complex interchange will nonetheless cause wrong characterization.\nImportance : the attribute name of the data on which road importance is based. Default value is set to None which means every road is taken for the network face calculation.\nValue : maximum value of the importance attribute. Roads with an importance higher than this value will not be taken.\nConcavity : maximum concavity. (concavity is the area of the polygon divided by the area of its convex hull)\nElongation : minimum elongation. (elongation is the length of the minimum rotated rectangle divided by its width)\nCompactness : maximum compactness. (compactness is calculated using (4*pi*area)/(perimeter^2))\nArea : area factor to detect very long motorways.\nWidth : maximum width of the the minimum rotated rectangle.\nHuber : Huber width for long motorways")
+        return self.tr("Detect dual carriageways based on geometric properties.\nThis algorithm proposed by Touya detects the network faces as road separator (*i.e.* separation between dual carriageways) when the polygon meets the geometric requirements. Those values can be tweaked to fine-tune the detection, but complex interchange will nonetheless cause wrong characterization.\nImportance : the attribute name of the data on which road importance is based. Default value is set to None which means every road is taken for the network face calculation.\nValue : maximum value of the importance attribute. Roads with an importance higher than this value will not be taken.\nConcavity : maximum concavity. (concavity is the area of the polygon divided by the area of its convex hull)\nElongation : minimum elongation. (elongation is the length of the minimum rotated rectangle divided by its width)\nCompactness : maximum compactness. (compactness is calculated using (4*pi*area)/(perimeter^2))\nArea : area factor to detect very long motorways.\nWidth : maximum width of the the minimum rotated rectangle.\nHuber : Huber width for long motorways")
         
     def icon(self):
         """
@@ -584,8 +584,8 @@ class CollapseDualCarriageways(QgsProcessingAlgorithm):
         if sigma == 0:
             sigma = None
         attr =  self.parameterAsFields(parameters, self.PROPAGATE_ATTRIBUTES, context)
-
-        cllpsed = collapse_dual_carriageways(gdf, dc, sigma=sigma, propagate_attributes=['importance'])
+        
+        cllpsed = collapse_dual_carriageways(gdf, dc, sigma=sigma, propagate_attributes=attr)
       
 
         try:
@@ -607,7 +607,7 @@ class CollapseDualCarriageways(QgsProcessingAlgorithm):
 
     
         # Créer une liste de QgsFeature
-        features = []
+        #features = []
         
         res = list_to_qgis_feature_2(cllpsed,source.fields())
 

@@ -124,7 +124,6 @@ def qgis_source_to_geodataframe_2(source):
   
 def list_to_qgis_feature_2(dicts,fields):
     features = []
-
     for d in dicts:
         feature = QgsFeature()
         feature.setFields(fields)

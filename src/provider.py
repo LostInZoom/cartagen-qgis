@@ -78,7 +78,8 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         # Tools
         self.addAlgorithm(NetworkFacesQGIS())
         
-
+        # Points
+        self.addAlgorithm(ReduceKmeans())
 
     def id(self):
         """

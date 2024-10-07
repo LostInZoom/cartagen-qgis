@@ -179,6 +179,14 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
     def createInstance(self):
         return VisvalingamWhyattQGIS()
 
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        return self.tr("Area-based line simplification.\nThe principle of the algorithm is to select the vertices to delete (the less characteristic ones). To select the vertices to delete, there is an iterative process, and at each iteration, the triangles formed by three consecutive vertices are computed. If the area of the smallest triangle is smaller than a threshold, the middle vertex is deleted, and another iteration starts. The algorithm is relevant for the simplification of natural line or polygon features such as rivers, forests, or coastlines.\nArea tolerance : the minimum triangle area to keep a vertex in the line.")
+        
 
 class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
     """
@@ -350,6 +358,14 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
         the Processing toolbox.
         """
         return PLUGIN_ICON
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        return self.tr("Hexagon-based line simplification.\nThis algorithm proposed by Raposo simplifies lines based on a hexagonal tessellation. Only one vertex is kept inside each cell. This point can be the centroid of the removed vertices, or a projection on the initial line of this centroid. The algorithm also works for the simplification of the border of a polygon object. \nInitial_scale : initial scale of the provided line (25000.0 for 1:25000 scale)\nFinal_scale : final scale of the simplified line\nCentroid : if true, uses the center of the hexagonal cells as the new vertex, if false, the center is projected on the nearest point in the initial line.\nTobler : If True, compute cell resolution based on Tobler’s formula, else uses Raposo’s formula")   
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)

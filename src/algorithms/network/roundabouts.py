@@ -149,7 +149,7 @@ class DetectRoundaboutsQGIS(QgsProcessingAlgorithm):
         gdf = qgis_source_to_geodataframe(source)
         records = gdf.to_dict('records')
         count = len(records)
-
+        feedback.setProgress(1)
         # # Define the output sink
         # (sink, dest_id) = self.parameterAsSink(
         #     parameters, self.OUTPUT, context,
@@ -447,7 +447,7 @@ class CollapseRoundaboutsQGIS(QgsProcessingAlgorithm):
         # Converts the list of dicts to a list of qgis features
         result = list_to_qgis_feature_2(cllpsed,source.fields())
         sink.addFeatures(result, QgsFeatureSink.FastInsert)
-
+        
         # # Add a feature in the sink
         #sink.addFeature(result, QgsFeatureSink.FastInsert)
 

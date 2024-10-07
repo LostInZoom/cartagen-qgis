@@ -284,15 +284,16 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
 
         if rb:
             rb = qgis_source_to_geodataframe(rb)
+          
             br = detect_branching_crossroads(gdf, roundabouts= rb, area_threshold = area_thrshld, maximum_distance_area = max_dist_area, 
                                               allow_middle_node = allow_mid_node, middle_angle_tolerance = mid_angle_tolerance, allow_single_4degree_node = allow_4degree)
-        
-
-        br = detect_branching_crossroads(gdf, area_threshold = area_thrshld, maximum_distance_area = max_dist_area, 
+            
+        else:
+            br = detect_branching_crossroads(gdf, area_threshold = area_thrshld, maximum_distance_area = max_dist_area, 
                                               allow_middle_node = allow_mid_node, middle_angle_tolerance = mid_angle_tolerance, allow_single_4degree_node = allow_4degree)
        
         br = br.to_dict('records')
-
+        
         if len(br) == 0:
            
             fields = QgsFields()

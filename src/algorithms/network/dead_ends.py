@@ -255,12 +255,14 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
         # Définir les champs
         fields = source.fields()
         fields.append(QgsField("deadend", QVariant.Bool))
-        fields.append(QgsField("face",  QVariant.Int))
-        fields.append(QgsField("deid",  QVariant.Int))
-        fields.append(QgsField("rid",  QVariant.Int))
-        fields.append(QgsField("connected", QVariant.Bool))
-        fields.append(QgsField("root", QVariant.Bool))
-        fields.append(QgsField("hole", QVariant.Bool))
+
+        if all('face' in dict for dict in dends):
+            fields.append(QgsField("face",  QVariant.Int))
+            fields.append(QgsField("deid",  QVariant.Int))
+            fields.append(QgsField("rid",  QVariant.Int))
+            fields.append(QgsField("connected", QVariant.Bool))
+            fields.append(QgsField("root", QVariant.Bool))
+            fields.append(QgsField("hole", QVariant.Bool))
 
         res = list_to_qgis_feature_2(dends,fields)
         # Créer une liste de QgsFeature
