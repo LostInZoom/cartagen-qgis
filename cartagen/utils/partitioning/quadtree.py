@@ -36,7 +36,8 @@ class PointSetQuadTree():
         """Divide (branch) this node by spawning four children nodes."""
 
         cx, cy = self.envelope.centroid.x, self.envelope.centroid.y
-        length = abs((self.envelope.bounds[0]) - (self.envelope.bounds[2]))
+        length = abs((min([coord[0] for coord in self.envelope.exterior.coords])) - (max([coord[0] for coord in self.envelope.exterior.coords]))) #removing bound method call
+
         # The boundaries of the four children nodes are "northwest",
         # "northeast", "southeast" and "southwest" quadrants within the
         # boundary of the current node.
@@ -56,6 +57,7 @@ class PointSetQuadTree():
     
     def insert(self, point):
         """Try to insert a point from a GeoDataFrame into this QuadTree."""
+        
         if not self.envelope.intersects(point['geometry']):
             # The point does not lie inside boundary: bail.
             return False

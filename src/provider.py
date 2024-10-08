@@ -80,6 +80,8 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         
         # Points
         self.addAlgorithm(ReduceKmeans())
+        self.addAlgorithm(ReduceLabelgrid())
+        self.addAlgorithm(ReduceQuadtree())
 
     def id(self):
         """

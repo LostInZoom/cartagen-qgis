@@ -214,12 +214,15 @@ def reduce_quadtree(points, depth, mode='simplification', column=None, quadtree=
     ----------
     .. footbibliography::
     """
-
     if column is not None and mode == 'simplification':
         warnings.warn("Warning: There is no need to indicate a column name in simplification mode.")
-
+    
     # First get the extent of the quadtree
-    xmin, ymin, xmax, ymax = points.geometry.total_bounds
+
+    xmin = min(points.geometry.x)
+    ymin = min(points.geometry.y)
+    xmax = max(points.geometry.x)
+    ymax = max(points.geometry.y)
     xcenter, ycenter = xmin + ((xmax - xmin) / 2), ymin + ((ymax - ymin) / 2)
     length = max(xmax - xmin, ymax - ymin) / 2
     xdmin, ydmin, xdmax, ydmax = xcenter - length, ycenter - length, xcenter + length, ycenter + length
@@ -440,13 +443,13 @@ class LabelGrid():
         """
         Create the grid of the label grid.
         """
-        polygons = tessellate(self.__points.total_bounds, self.__width, self.__height, self.__shape)
+        polygons = tessellate([min(self.__points.geometry.x),min(self.__points.geometry.y),max(self.__points.geometry.x),max(self.__points.geometry.y)],
+        self.__width, self.__height, self.__shape) #removing the call to .total_bounds method
         return gpd.GeoDataFrame({'geometry': polygons}, crs=self.__crs)
 
     def set_point_label_grid(self):
         """Set the attributes points_res and grid of the LabelGrid object."""
         self.__grid = self.__createGrid()
-        
         lst_in_value = [self.__points.loc[cell.contains(self.__points['geometry'])] 
                         for cell in self.__grid['geometry']]
 

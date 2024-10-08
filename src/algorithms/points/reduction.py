@@ -24,7 +24,7 @@ __revision__ = '$Format:%H$'
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
     QgsProcessing, QgsFeatureSink, QgsProcessingAlgorithm,
-    QgsFeature, QgsGeometry, QgsProcessingParameterDefinition
+    QgsFeature, QgsGeometry, QgsProcessingParameterDefinition, QgsWkbTypes
 )
 from qgis.core import (
     QgsProcessingParameterFeatureSource,
@@ -48,7 +48,7 @@ from shapely.wkt import loads
 
 class ReduceKmeans(QgsProcessingAlgorithm):
     """
-Reduce a set of points using K-Means clustering.
+    Reduce a set of points using K-Means clustering.
 
     For more information about K-Means clustering,
     here is a link to the related `wikipedia article
@@ -194,7 +194,7 @@ Reduce a set of points using K-Means clustering.
                 self.MODE,
                 'Select a mode',
                 modes,
-                defaultValue=0  
+                defaultValue=1  
             )
         self.addParameter(mode)
     
@@ -272,4 +272,540 @@ Reduce a set of points using K-Means clustering.
         feedback.setProgress(100)
         return {
             self.OUTPUT: dest_id
+        }
+
+class ReduceLabelgrid(QgsProcessingAlgorithm):
+    """
+    Reduce a set of points using the Label Grid method.
+    This algorithm was proposed by Gröbe & Burghardt. It assigns each point to a grid cell of a given height, width and shape before reducing the points per cells either by selection or aggregation.
+    
+    Parameters:
+
+    points (GeoDataFrame of Point) – The points to reduce.
+
+    width (float) – Width of the grid cells.
+
+    height (float) – Height of the grid cells.
+
+    shape (str, optional) – Shape of the grid cells, can be ‘square’, ‘diamond’, ‘hexagonal’.
+
+    mode (str, optional) –
+
+    There are three available modes:
+
+    ’selection’: for one cell, the algorithm retains the point with the largest value in the chosen column. This option requires the column parameter to be provided.
+
+    ’simplification’: the point retained in the cell is the closest to the center of the cell.
+
+    ’aggregation’: the points are all aggregated to the centroid of the cell. The count of point is added as a new attribute. If a column name is provided, also adds the sum of the attribute.
+
+    column (str, optional) – Name of the column to use.
+
+    grid (bool, optional) – If set to True, returns a tuple with the points and the grid. In aggregation mode, the returned grid cells contain the count of point aggregated along with sum and mean.
+    """
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    OUTPUT = 'OUTPUT'
+    OUTPUT_2 = 'OUTPUT_2'
+    INPUT = 'INPUT'
+
+    FIELD = 'FIELD'
+    WIDTH = 'WIDTH'
+    HEIGHT = 'HEIGHT'
+    SHAPE = 'SHAPE'   
+    MODE = 'MODE'
+    GRID = 'GRID'
+ 
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Label grid point reduction'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr(self.name())
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr(self.groupId())
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Points'
+
+    def icon(self):
+        """
+        Should return a QIcon which is used for your provider inside
+        the Processing toolbox.
+        """
+        return PLUGIN_ICON
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        return self.tr("Reduce a set of points using the Label Grid method.\nThis algorithm assigns each point to a grid cell of a given height, width and shape before reducing the points per cells either by selection or aggregation.\nWidth : width of the grid cells.\nHeight : height of the grid cells.\nShape : shape of the grid cells, can be 'square', 'diamond', 'hexagonal'.\nMode : there are three available modes:\n’selection’: for one cell, the algorithm retains the point with the largest value in the chosen column. This option requires the field parameter to be provided.\n’simplification’: the point retained in the cell is the closest to the center of the cell.\n’aggregation’: the points are all aggregated to the centroid of the cell. The count of point is added as a new attribute. If a field name is provided, also adds the sum of the attribute.\n Field name : name of the field to use.\n Grid : if set to True, returns the points and the grid. In aggregation mode, the returned grid cells contain the count/sum of points")
+        
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return ReduceLabelgrid()
+
+    def initAlgorithm(self, config):
+        """
+        Here we define the inputs and output of the algorithm, along
+        with some other properties.
+        """
+
+        # We add the input vector features source.
+        self.addParameter(
+            QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                self.tr('Input point layer'),
+                [QgsProcessing.TypeVectorPoint]
+            )
+        )
+
+        
+        field = QgsProcessingParameterField(
+                self.FIELD,
+                'Value field',
+                '',
+                self.INPUT,  
+                QgsProcessingParameterField.Numeric,
+                optional=True  
+            )
+        field.setFlags(field.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(field)
+
+        width = QgsProcessingParameterNumber(
+            self.WIDTH,
+            self.tr('Cell width'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=500,
+            optional=False
+        )
+        self.addParameter(width)
+
+        height = QgsProcessingParameterNumber(
+            self.HEIGHT,
+            self.tr('Cell height'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=500,
+            optional=False
+        )
+        self.addParameter(height)
+
+        modes = ['selection', 'simplification', 'aggregation']
+        
+        mode = QgsProcessingParameterEnum(
+                self.MODE,
+                'Select a mode',
+                modes,
+                defaultValue=1  
+            )
+        self.addParameter(mode)
+    
+        shapes = ['square','diamond','hexagonal']
+        shape = QgsProcessingParameterEnum(
+                self.SHAPE,
+                'Select a shape',
+                shapes,
+                defaultValue=0  
+            )
+        self.addParameter(shape)
+
+        get_grid = QgsProcessingParameterBoolean(
+            self.GRID,
+            self.tr('Retrieve the reduced points and the grid'),
+            defaultValue=False,
+            optional=True
+        )    
+        self.addParameter(get_grid)
+
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Reduced point Label grid')
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT_2,
+                self.tr('Grid object')
+            )
+        )
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """ 
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        points = qgis_source_to_geodataframe(source)
+        shapes = ['square','diamond','hexagonal']
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        
+        field = self.parameterAsString(parameters, self.FIELD, context)
+        width = self.parameterAsDouble(parameters, self.WIDTH, context)
+        height = self.parameterAsDouble(parameters, self.HEIGHT, context)
+        mode = self.parameterAsString(parameters, self.MODE, context)
+        shape = self.parameterAsInt(parameters, self.SHAPE, context)
+        grid = self.parameterAsBoolean(parameters, self.GRID, context)
+
+        feedback.setProgress(1)
+        if mode == "1":
+            res = reduce_labelgrid(points, width = width, height= height, shape=shapes[shape], mode = "simplification", grid=grid)
+            fields = source.fields()
+            if grid == True:
+                res_2 = res[1]
+                res = res[0]
+        elif mode == "0":
+            res = reduce_labelgrid(points, width = width, height= height, shape=shapes[shape], mode = "selection", column=field, grid=grid)
+            fields = source.fields()
+            if grid == True:
+                res_2 = res[1]
+                res = res[0]
+        else:
+            if field:
+                res = reduce_labelgrid(points, width = width, height= height, shape=shapes[shape], mode = "aggregation", column=field, grid=grid)
+                fields = QgsFields()
+                fields.append(QgsField("sum", QVariant.Double))
+                fields.append(QgsField("count",  QVariant.Int))
+                if grid == True:
+                    res_2 = res[1]
+                    res = res[0]
+            else:
+                res = reduce_labelgrid(points, width = width, height= height, shape=shapes[shape], mode = "aggregation", grid=grid)
+                fields = QgsFields()
+                fields.append(QgsField("count",  QVariant.Int))
+                if grid == True:
+                    res_2 = res[1]
+                    res = res[0]
+        feedback.setProgress(90)
+
+        res = res.to_dict('records')
+        res = list_to_qgis_feature_2(res,fields)
+     
+        # features = []
+        # fields = source.fields()
+
+        # for entity in res:
+        #     feature = QgsFeature()
+        #     feature.setFields(fields)
+        #     for i in range(len(fields)):
+        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
+            
+        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
+        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
+        #     feature.setGeometry(geom)
+            
+        #     features.append(feature)
+        
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        
+        # Add a feature in the sink
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+        
+        if grid == True:
+            res_2 = res_2.to_dict('records')
+            res_2 = list_to_qgis_feature(res_2)
+        
+            (sink_2, dest_id) = self.parameterAsSink(parameters, self.OUTPUT_2,
+                context, res_2[0].fields(), QgsWkbTypes.Polygon, source.sourceCrs())
+            sink_2.addFeatures(res_2, QgsFeatureSink.FastInsert)
+
+        feedback.setProgress(100)
+        return {
+            self.OUTPUT: dest_id,
+            self.OUTPUT_2: dest_id
+        }
+
+class ReduceQuadtree(QgsProcessingAlgorithm):
+    """
+    Reduce a set of points using a quadtree.
+
+    This algorithm was proposed by Bereuter & Weibel. [1] The quadtree algorithm iteratively divide the point set into four chunks, creating clusters, until the depth parameter is reach or only one point remain per cluster.
+
+    Parameters:
+
+    points (GeoDataFrame of Point) – The point set to reduce.
+
+    depth (int) – The maximum depth of the quadtree. This acts as a selector for the wanted degree of generalisation. The lower the value, the more generalised the point set will be.
+
+    mode (str, optional) –
+
+    There are three available modes:
+
+    ’selection’: for one cell, the algorithm retains the point with the largest value in the chosen column, weighted by the depth of the point. This option requires the column parameter to be provided.
+
+    ’simplification’: the point retained in the cell is the closest to the center of the cell.
+
+    ’aggregation’: the points are all aggregated to the centroid of the cell. The count of point is added as a new attribute. If a column name is provided, also adds the sum of the attribute.
+
+    column (str, optional) – Name of the column to use.
+
+    quadtree (bool, optional) – If set to True, returns a tuple with the reduced points and the quadtree.
+    """
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    OUTPUT = 'OUTPUT'
+    OUTPUT_2 = 'OUTPUT_2'
+    INPUT = 'INPUT'
+
+    FIELD = 'FIELD'
+    DEPTH = 'DEPTH'   
+    MODE = 'MODE'
+    QTREE = 'QTREE'
+ 
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Quadtree point reduction'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr(self.name())
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr(self.groupId())
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Points'
+
+    def icon(self):
+        """
+        Should return a QIcon which is used for your provider inside
+        the Processing toolbox.
+        """
+        return PLUGIN_ICON
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        return self.tr("Reduce a set of points using a quadtree.\nThe quadtree algorithm iteratively divide the point set into four chunks, creating clusters, until the depth parameter is reach or only one point remain per cluster.\nDepth : the maximum depth of the quadtree. This acts as a selector for the wanted degree of generalisation. The lower the value, the more generalised the point set will be.\nMode : there are three available modes:\n’selection’: for one cell, the algorithm retains the point with the largest value in the chosen column, weighted by the depth of the point. This option requires the column parameter to be provided.\n’simplification’: the point retained in the cell is the closest to the center of the cell.\n’aggregation’: the points are all aggregated to the centroid of the cell. The count of point is added as a new attribute. If a column name is provided, also adds the sum of the attribute.\nField name : name of the field to use.\nQuadtree : if set to True, returns the reduced points and the quadtree.")
+        
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return ReduceQuadtree()
+
+    def initAlgorithm(self, config):
+        """
+        Here we define the inputs and output of the algorithm, along
+        with some other properties.
+        """
+
+        # We add the input vector features source.
+        self.addParameter(
+            QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                self.tr('Input point layer'),
+                [QgsProcessing.TypeVectorPoint]
+            )
+        )
+        
+        field = QgsProcessingParameterField(
+                self.FIELD,
+                'Value field',
+                '',
+                self.INPUT,  
+                QgsProcessingParameterField.Numeric,
+                optional=True  
+            )
+        field.setFlags(field.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(field)
+
+        depth = QgsProcessingParameterNumber(
+            self.DEPTH,
+            self.tr('Depth value'),
+            type=QgsProcessingParameterNumber.Integer,
+            defaultValue=5,
+            optional=False
+        )
+        self.addParameter(depth)
+
+        modes = ['selection', 'simplification', 'aggregation']
+        
+        mode = QgsProcessingParameterEnum(
+                self.MODE,
+                'Select a mode',
+                modes,
+                defaultValue=1  
+            )
+        self.addParameter(mode)
+
+        qtree = QgsProcessingParameterBoolean(
+            self.QTREE,
+            self.tr('Retrieve the reduced points and the Quadtree'),
+            defaultValue=False,
+            optional=True
+        )    
+        self.addParameter(qtree)
+
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Reduced points Quadtree')
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT_2,
+                self.tr('Quadtree object')
+            )
+        )
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """ 
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        points = qgis_source_to_geodataframe(source)
+    
+      
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        
+        field = self.parameterAsString(parameters, self.FIELD, context)
+        depth = self.parameterAsInt(parameters, self.DEPTH, context)
+        mode = self.parameterAsString(parameters, self.MODE, context)
+        qtree = self.parameterAsBoolean(parameters, self.QTREE, context)
+        
+        feedback.setProgress(1)
+        
+        if mode == "1":
+            res = reduce_quadtree(points, depth= depth, mode = 'simplification', quadtree=qtree)
+            fields = source.fields()
+            if qtree == True:
+                res_2 = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res[1].geometry()))
+                res = res[0]
+        elif mode == "0":
+            res = reduce_quadtree(points, depth= depth, mode = 'selection', column=field, quadtree=qtree)
+            fields = source.fields()
+            if qtree == True:
+                res_2 = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res[1].geometry()))
+                res = res[0]
+        else:
+            if field:
+                res = reduce_quadtree(points, depth= depth, mode = 'aggregation', column=field, quadtree=qtree)
+                fields = QgsFields()
+                fields.append(QgsField("total", QVariant.Double))
+                fields.append(QgsField("count",  QVariant.Int))
+                if qtree == True:
+                    res_2 = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res[1].geometry()))
+                    res = res[0]
+            else:
+                res = reduce_quadtree(points, depth= depth, mode = 'aggregation', quadtree= qtree)
+                fields = QgsFields()
+                fields.append(QgsField("count",  QVariant.Int))
+                if qtree == True:
+                    res_2 = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res[1].geometry()))
+                    res = res[0]
+
+        feedback.setProgress(90)
+
+        res = res.to_dict('records')
+        res = list_to_qgis_feature_2(res,fields)
+     
+        # features = []
+        # fields = source.fields()
+
+        # for entity in res:
+        #     feature = QgsFeature()
+        #     feature.setFields(fields)
+        #     for i in range(len(fields)):
+        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
+            
+        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
+        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
+        #     feature.setGeometry(geom)
+            
+        #     features.append(feature)
+        
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        
+        if qtree == True:
+            res_2 = res_2.to_dict('records')
+            res_2 = list_to_qgis_feature(res_2)
+        
+            (sink_2, dest_id) = self.parameterAsSink(parameters, self.OUTPUT_2,
+                context, res_2[0].fields(), QgsWkbTypes.LineString, source.sourceCrs())
+            sink_2.addFeatures(res_2, QgsFeatureSink.FastInsert)
+        
+        # Add a feature in the sink
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+        
+        feedback.setProgress(100)
+        
+        return {
+            self.OUTPUT: dest_id,
+            self.OUTPUT_2: dest_id
         }

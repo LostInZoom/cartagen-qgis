@@ -206,48 +206,48 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
         
         dends = dends.to_dict('records')
       
-    #     # Récupérer toutes les clés présentes dans les dictionnaires
-    #     all_keys = set()
-    #     all_keys.update(dends[0].keys()) 
+        #     # Récupérer toutes les clés présentes dans les dictionnaires
+        #     all_keys = set()
+        #     all_keys.update(dends[0].keys()) 
 
-	# # Supprimer les clés 'x' et 'y' car elles sont utilisées pour la géométrie
-    #     all_keys.discard('geometry')
-    
+        # # Supprimer les clés 'x' et 'y' car elles sont utilisées pour la géométrie
+        #     all_keys.discard('geometry')
+        
 
-	# # Création d'une nouvelle couche
-    #     result = QgsVectorLayer('LineString?crs=EPSG:2154', 'Dynamic Fields Layer', 'memory')
-    #     provider = result.dataProvider()
+        # # Création d'une nouvelle couche
+        #     result = QgsVectorLayer('LineString?crs=EPSG:2154', 'Dynamic Fields Layer', 'memory')
+        #     provider = result.dataProvider()
 
-	# # Définir les champs (attributs) dynamiquement
-    #     fields = QgsFields()
-    #     for key in all_keys:
-    # 		# Déterminer le type du champ basé sur le type de valeur
-    # 	        sample_value = next(entity[key] for entity in dends if key in entity)
-    # 	        if isinstance(sample_value, int):
-    # 	        	field_type = QVariant.Int
-    # 	        elif isinstance(sample_value, float):
-    # 	        	field_type = QVariant.Double
-    # 	        else:
-    #             	field_type = QVariant.String
-                	
-    #    	fields.append(QgsField(key, field_type))
+        # # Définir les champs (attributs) dynamiquement
+        #     fields = QgsFields()
+        #     for key in all_keys:
+        # 		# Déterminer le type du champ basé sur le type de valeur
+        # 	        sample_value = next(entity[key] for entity in dends if key in entity)
+        # 	        if isinstance(sample_value, int):
+        # 	        	field_type = QVariant.Int
+        # 	        elif isinstance(sample_value, float):
+        # 	        	field_type = QVariant.Double
+        # 	        else:
+        #             	field_type = QVariant.String
+                        
+        #    	fields.append(QgsField(key, field_type))
 
-    #     provider.addAttributes(fields)
-    #     result.updateFields()
+        #     provider.addAttributes(fields)
+        #     result.updateFields()
 
-	# # Ajouter des entités (features) à la couche
-    #     for entity in dends:  		
-    #         feature = QgsFeature()
-    #         geom = QgsGeometry.fromWkt(str(entity['geometry']))
-    #         feature.setGeometry(geom)
-    
-    # 		# Créer la liste des attributs en respectant l'ordre des champs
-    #         attributes = []
-    #         for field in result.fields():
-    #             attributes.append(entity.get(field.name(), None))
+        # # Ajouter des entités (features) à la couche
+        #     for entity in dends:  		
+        #         feature = QgsFeature()
+        #         geom = QgsGeometry.fromWkt(str(entity['geometry']))
+        #         feature.setGeometry(geom)
+        
+        # 		# Créer la liste des attributs en respectant l'ordre des champs
+        #         attributes = []
+        #         for field in result.fields():
+        #             attributes.append(entity.get(field.name(), None))
 
-    #             feature.setAttributes(attributes)
-    #             provider.addFeatures([feature])
+        #             feature.setAttributes(attributes)
+        #             provider.addFeatures([feature])
         
         # Converts the list of dicts to a list of qgis features
     
@@ -492,48 +492,48 @@ class EliminateDeadEnds(QgsProcessingAlgorithm):
         
         elim = elim.to_dict('records')
         
-    #     # Récupérer toutes les clés présentes dans les dictionnaires
-    #     all_keys = set()
-    #     all_keys.update(dends[0].keys()) 
+        #     # Récupérer toutes les clés présentes dans les dictionnaires
+        #     all_keys = set()
+        #     all_keys.update(dends[0].keys()) 
 
-	# # Supprimer les clés 'x' et 'y' car elles sont utilisées pour la géométrie
-    #     all_keys.discard('geometry')
-    
+        # # Supprimer les clés 'x' et 'y' car elles sont utilisées pour la géométrie
+        #     all_keys.discard('geometry')
+        
 
-	# # Création d'une nouvelle couche
-    #     result = QgsVectorLayer('LineString?crs=EPSG:2154', 'Dynamic Fields Layer', 'memory')
-    #     provider = result.dataProvider()
+        # # Création d'une nouvelle couche
+        #     result = QgsVectorLayer('LineString?crs=EPSG:2154', 'Dynamic Fields Layer', 'memory')
+        #     provider = result.dataProvider()
 
-	# # Définir les champs (attributs) dynamiquement
-    #     fields = QgsFields()
-    #     for key in all_keys:
-    # 		# Déterminer le type du champ basé sur le type de valeur
-    # 	        sample_value = next(entity[key] for entity in dends if key in entity)
-    # 	        if isinstance(sample_value, int):
-    # 	        	field_type = QVariant.Int
-    # 	        elif isinstance(sample_value, float):
-    # 	        	field_type = QVariant.Double
-    # 	        else:
-    #             	field_type = QVariant.String
-                	
-    #    	fields.append(QgsField(key, field_type))
+        # # Définir les champs (attributs) dynamiquement
+        #     fields = QgsFields()
+        #     for key in all_keys:
+        # 		# Déterminer le type du champ basé sur le type de valeur
+        # 	        sample_value = next(entity[key] for entity in dends if key in entity)
+        # 	        if isinstance(sample_value, int):
+        # 	        	field_type = QVariant.Int
+        # 	        elif isinstance(sample_value, float):
+        # 	        	field_type = QVariant.Double
+        # 	        else:
+        #             	field_type = QVariant.String
+                        
+        #    	fields.append(QgsField(key, field_type))
 
-    #     provider.addAttributes(fields)
-    #     result.updateFields()
+        #     provider.addAttributes(fields)
+        #     result.updateFields()
 
-	# # Ajouter des entités (features) à la couche
-    #     for entity in dends:  		
-    #         feature = QgsFeature()
-    #         geom = QgsGeometry.fromWkt(str(entity['geometry']))
-    #         feature.setGeometry(geom)
-    
-    # 		# Créer la liste des attributs en respectant l'ordre des champs
-    #         attributes = []
-    #         for field in result.fields():
-    #             attributes.append(entity.get(field.name(), None))
+        # # Ajouter des entités (features) à la couche
+        #     for entity in dends:  		
+        #         feature = QgsFeature()
+        #         geom = QgsGeometry.fromWkt(str(entity['geometry']))
+        #         feature.setGeometry(geom)
+        
+        # 		# Créer la liste des attributs en respectant l'ordre des champs
+        #         attributes = []
+        #         for field in result.fields():
+        #             attributes.append(entity.get(field.name(), None))
 
-    #             feature.setAttributes(attributes)
-    #             provider.addFeatures([feature])
+        #             feature.setAttributes(attributes)
+        #             provider.addFeatures([feature])
         
         # Converts the list of dicts to a list of qgis features
         #result = list_to_qgis_feature(dends)
