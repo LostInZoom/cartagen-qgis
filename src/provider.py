@@ -82,6 +82,9 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         self.addAlgorithm(ReduceKmeans())
         self.addAlgorithm(ReduceLabelgrid())
         self.addAlgorithm(ReduceQuadtree())
+        self.addAlgorithm(HullDelaunay())
+        self.addAlgorithm(HullSwingingArm())
+        self.addAlgorithm(VectorHeatmap())
 
     def id(self):
         """

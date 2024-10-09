@@ -61,10 +61,10 @@ def heatmap(points, cell_size, radius, column=None, method='quartic', clip=None)
     .. footbibliography::
     """
     #create square grid 
-    xmin = points.total_bounds[0]
-    xmax = points.total_bounds[2]
-    ymin = points.total_bounds[1]
-    ymax = points.total_bounds[3]
+    xmin = min(points.geometry.x) #remove call to .total_boundds method
+    xmax = max(points.geometry.x)
+    ymin = min(points.geometry.y)
+    ymax = max(points.geometry.y)
 
     cols = list(np.arange(xmin, xmax + cell_size, cell_size))
     rows = list(np.arange(ymin, ymax + cell_size, cell_size))
@@ -86,12 +86,7 @@ def heatmap(points, cell_size, radius, column=None, method='quartic', clip=None)
     points_y = list(points.geometry.y)
 
     #definition de la fonction de lissage par méthode des noyaux (quadratique)
-    if method == 'quartic':
-        def kernel(d,radius):
-            dn=d/radius
-            P=(15/16)*(1-dn**2)**2
-            return P
-
+        #removed the definition of function inside a function
     #density calculation
     intensity_list = [] # list to store density value of each cell
     for i in range(len(centroids)):
@@ -99,7 +94,17 @@ def heatmap(points, cell_size, radius, column=None, method='quartic', clip=None)
         for k in range(len(points_x)):
             d = np.sqrt((centroids_x[i]-points_x[k])**2+(centroids_y[i]-points_y[k])**2)
             if d <= radius:
-                p = kernel(d,radius)
+                if method == 'quartic':
+                    p = (15/16)*(1-(d/radius)**2)**2
+                elif method == 'epanechnikov':
+                    p = (3/4)*(1-(d/radius)**2)
+                elif method == 'gaussian':
+                    p = (1/np.sqrt(2 * np.pi))*np.exp(-(d/radius)**2 / 2)
+                elif method == 'uniform':
+                    p = 1/2
+                elif method == 'triangular':
+                    p = 1-abs(d/radius)
+                
                 if column is None:
                     kde_value_list.append(p)
                 else: 
