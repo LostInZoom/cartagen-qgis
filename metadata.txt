@@ -7,7 +7,7 @@ name=CartAGen
 qgisMinimumVersion=3.0
 description=Cartographic generalization
 version=1.0.0
-author=Guillaume Touya, Justin Berli, Paul Bourcier
+author=Guillaume Touya, Justin Berli & Paul Bourcier
 email=guillaume.touya@ign.fr
 
 about=Provide cartographic generalization algorithms from the cartagen python library.
