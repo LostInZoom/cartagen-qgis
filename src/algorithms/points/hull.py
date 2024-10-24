@@ -174,38 +174,32 @@ class HullDelaunay(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        #transform the source into a GeoDataFrame
         points = qgis_source_to_geodataframe(source)
         
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        # total = 100.0 / source.featureCount() if source.featureCount() else 0
         
+        feedback.setProgress(1) #set the loading bar to 1%
+
+        #retrieve the other input parameter
         length = self.parameterAsDouble(parameters, self.LENGTH, context)
 
-        feedback.setProgress(1)
+        #transform the gdf to a list of geometry, to fit the CartAGen algorithm
         points = list(points.geometry)
+
+        #perform the CG algorithm
         res = hull_delaunay(points, length=length)
-        feedback.setProgress(90)
+
+        feedback.setProgress(90) #set the loading bar to 90%
         
+        # Convert the result to a gdf, the gdf to a dictionnary, and the dictionnary to a lsit of QgsFeature()
         res = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res))
         res = res.to_dict('records')
         res = list_to_qgis_feature(res)
-     
-        # features = []
-        # fields = source.fields()
-
-        # for entity in res:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
         
+        # Define the ouput sink
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, res[0].fields(), QgsWkbTypes.Polygon, source.sourceCrs())
         
@@ -331,7 +325,6 @@ class HullSwingingArm(QgsProcessingAlgorithm):
 
 
         directions = ['cw', 'ccw']
-        
         direction = QgsProcessingParameterEnum(
                 self.DIRECTION,
                 'Rotation direction of the arm',
@@ -359,46 +352,42 @@ class HullSwingingArm(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        #transform the source to a GeoDataFrame
         points = qgis_source_to_geodataframe(source)
         
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        # total = 100.0 / source.featureCount() if source.featureCount() else 0
         
+        # retrieve the values of the parameters
         length = self.parameterAsDouble(parameters, self.LENGTH, context)
         directions = ['cw', 'ccw']
         direction = self.parameterAsString(parameters, self.DIRECTION, context)
 
-        feedback.setProgress(1)
+        feedback.setProgress(1) #set loading bar to 1 %
+
+        # transform the GDF into a list of geometry to fit the algorithm
         points = list(points.geometry)
+
+        # Perform CG algorithm
         res = hull_swinging_arm(points, length=length, direction=directions[int(direction)])
-        feedback.setProgress(90)
+
+        feedback.setProgress(90) #set loading bar to 90 %
         
+        #transform the result into a gdf, the gdf into a dictionnary, and the dictionnary into a list of QgsFeature()
         res = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res))
         res = res.to_dict('records')
         res = list_to_qgis_feature(res)
      
-        # features = []
-        # fields = source.fields()
-
-        # for entity in res:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
-        
+        #Define the output sink
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, res[0].fields(), QgsWkbTypes.Polygon, source.sourceCrs())
         
         # Add a feature in the sink
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
-        feedback.setProgress(100)
+        
+        feedback.setProgress(100) #set loading bar to 100 %
+        
         return {
             self.OUTPUT: dest_id
         }

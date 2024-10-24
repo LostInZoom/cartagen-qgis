@@ -28,37 +28,33 @@ def qgis_source_to_geodataframe(source):
 def list_to_qgis_feature(dicts):
     """
     Converts a list of dicts with attributes and geometry to a list of qgis features.
+    Can be heavy if there are a lot of keys and empty values in your dictionnary. If you are able to
+    provide a QgsFeature.fields() object, consider using the list_to_qgis_feature_2 instead.
     """
-    # gdf = gpd.GeoDataFrame(dicts, crs)
-    # return QgsVectorLayer(gdf.to_json())
-    # print(type(dicts[0][list(dicts[0].keys())[36]]))
-    # print(type(dicts[0][list(dicts[0].keys())[37]]))
-    # print(dicts[0][list(dicts[0].keys())[38]])
-    # print(dicts[0][list(dicts[0].keys())[39]])
     features = []
     field_list = []
-    for j in range(len(dicts[0].keys())):
-        if list(dicts[0].keys())[j] != 'geometry':
+    for j in range(len(dicts[0].keys())): #i.e for each key of your first dict
+        if list(dicts[0].keys())[j] != 'geometry': #if the current key is not called 'geometry'
      
             if isinstance(dicts[0][list(dicts[0].keys())[j]], str):
                 field_list.append(QgsField(list(dicts[0].keys())[j], QVariant.String))
-                #print("ici5")
+                #if the first value of the key is a str, append the field list with the name of the key and the type Qvariant
             elif isinstance(dicts[0][list(dicts[0].keys())[j]], int):
                 field_list.append(QgsField(list(dicts[0].keys())[j], QVariant.LongLong))
-                #print("ici4")
+                #same with int
             elif isinstance(dicts[0][list(dicts[0].keys())[j]], float):
                 field_list.append(QgsField(list(dicts[0].keys())[j], QVariant.Double))
-                #print("ici3")
+                #same with float
             elif isinstance(dicts[0][list(dicts[0].keys())[j]], QDateTime):     
                 field_list.append(QgsField(list(dicts[0].keys())[j], QVariant.DateTime))
-                #print("ici2")
+                #same with DateTime
             elif  isinstance(dicts[0][list(dicts[0].keys())[j]], QDate):
                 field_list.append(QgsField(list(dicts[0].keys())[j], QVariant.Date))
-                #print("ici1")
+                #same with date
             
-            else:
+            else: #if none of those type are found (it can means that the value of the key has no value)
                 count = 0
-                try:
+                try: #try to test the value type for the same key but it the next dict (i.e next feature)
                     while not dicts[count][list(dicts[count].keys())[j]]:
                         count += 1
                         if isinstance(dicts[count][list(dicts[count].keys())[j]], str):
@@ -76,27 +72,26 @@ def list_to_qgis_feature(dicts):
                         elif isinstance(dicts[count][list(dicts[count].keys())[j]], QDate):
                              field_list.append(QgsField(list(dicts[count].keys())[j], QVariant.Date))
                 except IndexError:
-                   
+                    #if none of those type are found again, append a Qvariant.String field
                     field_list.append(QgsField(list(dicts[0].keys())[j], QVariant.String))
               
-        else:
+        else: #don't append the field list if the key is "geometry"
             pass
 
     fields = QgsFields()
-    # Ajouter chaque QgsField à l'instance de QgsFields
-    for field in field_list:
+    for field in field_list: #append the fields from the field list into a QgsFields() object
         fields.append(field)
 
-    for d in dicts:
-        feature = QgsFeature()
-        feature.setGeometry(QgsGeometry.fromWkt(d['geometry'].wkt))
-        feature.setFields(fields)
-        for i in range(len(d.keys())):
-            if list(d.keys())[i] != 'geometry':
-                if d[list(d.keys())[i]] == d[list(d.keys())[i]]:
-                    feature.setAttribute(list(d.keys())[i], d[list(d.keys())[i]])
+    for d in dicts: #for each dict from the list
+        feature = QgsFeature() #create a QgsFeature()
+        feature.setGeometry(QgsGeometry.fromWkt(d['geometry'].wkt)) #append its geometry
+        feature.setFields(fields) #apend its fields (name + type)
+        for i in range(len(d.keys())): # for each key of the dict
+            if list(d.keys())[i] != 'geometry': #if the key is not 'geometry"
+                if d[list(d.keys())[i]] == d[list(d.keys())[i]]: #if the key value is not a NaN
+                    feature.setAttribute(list(d.keys())[i], d[list(d.keys())[i]]) #append the value of the key to the feature
                 else:
-                    feature.setAttribute(list(d.keys())[i], None)
+                    feature.setAttribute(list(d.keys())[i], None) #append a None
         features.append(feature)
 
     return features
@@ -123,15 +118,19 @@ def qgis_source_to_geodataframe_2(source):
     return gdf
   
 def list_to_qgis_feature_2(dicts,fields):
+    """
+    Converts a list of dicts with attributes and geometry to a list of qgis features. 
+    Less heavy than the first function, it is useful when you can provide a QgsFeature.fields() objects
+    """
     features = []
-    for d in dicts:
-        feature = QgsFeature()
-        feature.setFields(fields)
-        for i in range(len(fields)):
-            if d[fields[i].name()] == d[fields[i].name()]:
-                feature.setAttribute(fields[i].name(), d[fields[i].name()])
+    for d in dicts: #for each dict of the list of dicts (i.e each feature)
+        feature = QgsFeature() #create the QgsFeature() object
+        feature.setFields(fields) #set its fields (name and types) thanks to the QgsFeature.fields() object
+        for i in range(len(fields)): #for each field
+            if d[fields[i].name()] == d[fields[i].name()]: #if the key value of the dict is not a NaN
+                feature.setAttribute(fields[i].name(), d[fields[i].name()]) #append the feature with the value of the key
             else:
-                feature.setAttribute(fields[i].name(), None)
+                feature.setAttribute(fields[i].name(), None) #else set None
         feature.setGeometry(QgsGeometry.fromWkt(d['geometry'].wkt))
         features.append(feature)  
 

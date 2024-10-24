@@ -46,20 +46,20 @@ from shapely.wkt import loads
 
 class DouglasPeucker(QgsProcessingAlgorithm):
     """
-Distance-based line simplification.
+    Distance-based line simplification.
 
-This algorithm was proposed by Ramer and by Douglas and Peucker. 
-It is a line filtering algorithm, which means that it filters the vertices of the line (or polygon)
-to only retain the most important ones to preserve the shape of the line. 
-The algorithm iteratively searches the most characteristics vertices of portions of the line and decides
-to retain or remove them given a distance threshold.
+    This algorithm was proposed by Ramer and by Douglas and Peucker. 
+    It is a line filtering algorithm, which means that it filters the vertices of the line (or polygon)
+    to only retain the most important ones to preserve the shape of the line. 
+    The algorithm iteratively searches the most characteristics vertices of portions of the line and decides
+    to retain or remove them given a distance threshold.
 
-The algorithm tends to unsmooth geographic lines, and is rarely used to simplify geographic features. 
-But it can be very useful to quickly filter the vertices of a line inside another algorithm.
+    The algorithm tends to unsmooth geographic lines, and is rarely used to simplify geographic features. 
+    But it can be very useful to quickly filter the vertices of a line inside another algorithm.
 
-This is a simple wrapper around shapely.simplify().
+    This is a simple wrapper around shapely.simplify().
 
-Parameters:
+    Parameters:
 
     line (LineString) – The line to simplify.
 
@@ -191,33 +191,21 @@ Parameters:
         
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        # total = 100.0 / source.featureCount() if source.featureCount() else 0
         
+        # Retrieve the other parameter values 
         threshold = self.parameterAsDouble(parameters, self.THRESHOLD, context)
         preserve_topology = self.parameterAsBoolean(parameters, self.PRESERVE_TOPOLOGY, context)
 
+        # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
         dp = gdf.copy()
         for i in range(len(gdf)):
             dp.loc[i,'geometry'] = douglas_peucker(list(gdf.geometry)[i],threshold= threshold, preserve_topology= preserve_topology)
             
             res = dp.to_dict('records')
             res = list_to_qgis_feature_2(res,source.fields())
-     
-        # features = []
-        # fields = source.fields()
 
-        # for entity in res:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
-        
+        # Create the output sink    
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, res[0].fields(), source.wkbType(), source.sourceCrs())
         

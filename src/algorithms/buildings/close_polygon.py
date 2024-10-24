@@ -184,11 +184,13 @@ Parameters:
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        #total = 100.0 / source.featureCount() if source.featureCount() else 0
         
+        # Retrieve theother parameter values
         size = self.parameterAsDouble(parameters, self.SIZE, context)
         quad_segs = self.parameterAsInt(parameters, self.QUAD_SEGS, context)
 
+        # Use the CartAGen algorithm and transform the ersult to a list of QgsFeature()
         cp = gdf.copy()
         for i in range(len(gdf)):
             cp.loc[i,'geometry'] = close_polygon(gdf.loc[i,"geometry"],size = size, quad_segs= quad_segs)
@@ -196,21 +198,7 @@ Parameters:
             res = cp.to_dict('records')
             res = list_to_qgis_feature_2(res,source.fields())
      
-        # features = []
-        # fields = source.fields()
-
-        # for entity in res:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
-        
+        #Create the output sink
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, res[0].fields(), source.wkbType(), source.sourceCrs())
         

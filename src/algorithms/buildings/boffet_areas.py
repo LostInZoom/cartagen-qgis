@@ -220,26 +220,28 @@ class BoffetArea(QgsProcessingAlgorithm):
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        #total = 100.0 / source.featureCount() if source.featureCount() else 0
        
+        # Retrieve the network parameter and transform it to a lsit of GeoDataFrame
         networks = self.parameterAsLayerList(parameters, self.INPUT_NETWORK_PART, context)
         gdf_list_networks = []
         for i in networks:
             gdf_list_networks.append(qgis_source_to_geodataframe(i))
         
+        # Retrieve other parameter values
         activate_network_part = self.parameterAsBoolean(parameters, self.NETWORK_PARTITIONING_TF, context)
-        
         buffer = self.parameterAsDouble(parameters, self.BUFFER, context)
         erosion = self.parameterAsDouble(parameters, self.EROSION, context)
         simpl_dist = self.parameterAsInt(parameters, self.SIMPLIFICATION_DISTANCE, context)
 
+        # Use the CartAGen algorithm with or without the network partitionning
+        # Transform the result to QgsFeature()
         if len(gdf_list_networks) == 0 or activate_network_part == False:
             boffet = boffet_areas(gdf.geometry,buffer = buffer, erosion = erosion, simplification_distance = simpl_dist)
             
             boffet_gdf = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(boffet))
             res = boffet_gdf.to_dict('records')
             res = list_to_qgis_feature(res)
-     
 
         else:
             part = partition_networks(gdf,gdf_list_networks[0])
@@ -262,22 +264,8 @@ class BoffetArea(QgsProcessingAlgorithm):
 
             else:
                 raise Exception("No entity detected within the network used for partitioning datas") 
-
-        # features = []
-        # fields = source.fields()
-
-        # for entity in res:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
         
+        #Create output sink
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, res[0].fields(), source.wkbType(), source.sourceCrs())
         

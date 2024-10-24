@@ -152,7 +152,7 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
             )
         )
   		        
-       	outside_faces = QgsProcessingParameterBoolean(
+        outside_faces = QgsProcessingParameterBoolean(
             self.OUTSIDE_FACES,
             self.tr('Outside faces'),
             defaultValue=True,
@@ -177,17 +177,6 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT, context)
         
-        #layer = QgsVectorLayer("Point", "temp", "memory")
-        #pr = layer.dataProvider()
-        #pr.addAttributes([QgsField("deadend", QVariant.Bool),
-		#QgsField("face",  QVariant.Int),
-        #QgsField("deid",  QVariant.Int),
-        #QgsField("connected", QVariant.Bool),
-        #QgsField("root", QVariant.Bool),
-        #QgsField("hole", QVariant.Bool)])
-        #layer.updateFields()
-
-		
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
         gdf = qgis_source_to_geodataframe(source)
         records = gdf.to_dict('records')
@@ -201,58 +190,11 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
         
         # Actual algorithm
         dends = detect_dead_ends(gdf, o_faces)
-        #dends = dends.fillna(9999)
-        #result = QgsVectorLayer(dends.to_json(),"mygeojson","ogr")
-        
+    
+        # Convert the result to a list of dicts
         dends = dends.to_dict('records')
       
-        #     # Récupérer toutes les clés présentes dans les dictionnaires
-        #     all_keys = set()
-        #     all_keys.update(dends[0].keys()) 
-
-        # # Supprimer les clés 'x' et 'y' car elles sont utilisées pour la géométrie
-        #     all_keys.discard('geometry')
-        
-
-        # # Création d'une nouvelle couche
-        #     result = QgsVectorLayer('LineString?crs=EPSG:2154', 'Dynamic Fields Layer', 'memory')
-        #     provider = result.dataProvider()
-
-        # # Définir les champs (attributs) dynamiquement
-        #     fields = QgsFields()
-        #     for key in all_keys:
-        # 		# Déterminer le type du champ basé sur le type de valeur
-        # 	        sample_value = next(entity[key] for entity in dends if key in entity)
-        # 	        if isinstance(sample_value, int):
-        # 	        	field_type = QVariant.Int
-        # 	        elif isinstance(sample_value, float):
-        # 	        	field_type = QVariant.Double
-        # 	        else:
-        #             	field_type = QVariant.String
-                        
-        #    	fields.append(QgsField(key, field_type))
-
-        #     provider.addAttributes(fields)
-        #     result.updateFields()
-
-        # # Ajouter des entités (features) à la couche
-        #     for entity in dends:  		
-        #         feature = QgsFeature()
-        #         geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #         feature.setGeometry(geom)
-        
-        # 		# Créer la liste des attributs en respectant l'ordre des champs
-        #         attributes = []
-        #         for field in result.fields():
-        #             attributes.append(entity.get(field.name(), None))
-
-        #             feature.setAttributes(attributes)
-        #             provider.addFeatures([feature])
-        
-        # Converts the list of dicts to a list of qgis features
-    
-         
-        # Définir les champs
+        # Define the fields (get the source fields and a add some fields)
         fields = source.fields()
         fields.append(QgsField("deadend", QVariant.Bool))
 
@@ -264,28 +206,9 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
             fields.append(QgsField("root", QVariant.Bool))
             fields.append(QgsField("hole", QVariant.Bool))
 
+        #transform the result to a list of QgsFeature()
         res = list_to_qgis_feature_2(dends,fields)
-        # Créer une liste de QgsFeature
-        # features = []
-
-        # for entity in dends:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
-
-
-        #result = QgsVectorLayer("dtcted_de","temp","memory")
-        #list_result = []
-        #for feature in result.getFeatures():
-        #list_result.append(feature)
-       
+      
         # Define the output sink
         (sink, dest_id) = self.parameterAsSink(
             parameters, self.OUTPUT, context,
@@ -294,6 +217,7 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
             crs=source.sourceCrs()
         )
         
+        #Add features to the sink
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
 
         return {
@@ -429,7 +353,7 @@ class EliminateDeadEnds(QgsProcessingAlgorithm):
             )
         )
   		        
-       	keep_longest = QgsProcessingParameterBoolean(
+        keep_longest = QgsProcessingParameterBoolean(
             self.KEEP_LONGEST,
             self.tr('keep longest'),
             defaultValue=True,
@@ -462,24 +386,13 @@ class EliminateDeadEnds(QgsProcessingAlgorithm):
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT, context)
  	
-        #layer = QgsVectorLayer("Point", "temp", "memory")
-        #pr = layer.dataProvider()
-        #pr.addAttributes([QgsField("deadend", QVariant.Bool),
-		#QgsField("face",  QVariant.Int),
-                  #QgsField("deid",  QVariant.Int),
-                  #QgsField("connected", QVariant.Bool),
-                  #QgsField("root", QVariant.Bool),
-                  #QgsField("hole", QVariant.Bool)])
-        #layer.updateFields()
-
-		
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
         gdf = qgis_source_to_geodataframe(source)
         records = gdf.to_dict('records')
         count = len(records)
 
         # Compute the number of steps to display within the progress bar and
-        total = 100.0 / count if count > 0 else 0
+        # total = 100.0 / count if count > 0 else 0
         
         # Retrieve parameters
         k_longest = self.parameterAsBoolean(parameters, self.KEEP_LONGEST, context)
@@ -488,62 +401,9 @@ class EliminateDeadEnds(QgsProcessingAlgorithm):
         # Actual algorithm
         elim = eliminate_dead_ends(gdf, length, k_longest)
 
-        #result = QgsVectorLayer(dends.to_json(),"mygeojson","ogr")
-        
+        # Convert the result into a list of dictionnaries, and this list into a list of QgsFeature()
         elim = elim.to_dict('records')
-        
-        #     # Récupérer toutes les clés présentes dans les dictionnaires
-        #     all_keys = set()
-        #     all_keys.update(dends[0].keys()) 
-
-        # # Supprimer les clés 'x' et 'y' car elles sont utilisées pour la géométrie
-        #     all_keys.discard('geometry')
-        
-
-        # # Création d'une nouvelle couche
-        #     result = QgsVectorLayer('LineString?crs=EPSG:2154', 'Dynamic Fields Layer', 'memory')
-        #     provider = result.dataProvider()
-
-        # # Définir les champs (attributs) dynamiquement
-        #     fields = QgsFields()
-        #     for key in all_keys:
-        # 		# Déterminer le type du champ basé sur le type de valeur
-        # 	        sample_value = next(entity[key] for entity in dends if key in entity)
-        # 	        if isinstance(sample_value, int):
-        # 	        	field_type = QVariant.Int
-        # 	        elif isinstance(sample_value, float):
-        # 	        	field_type = QVariant.Double
-        # 	        else:
-        #             	field_type = QVariant.String
-                        
-        #    	fields.append(QgsField(key, field_type))
-
-        #     provider.addAttributes(fields)
-        #     result.updateFields()
-
-        # # Ajouter des entités (features) à la couche
-        #     for entity in dends:  		
-        #         feature = QgsFeature()
-        #         geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #         feature.setGeometry(geom)
-        
-        # 		# Créer la liste des attributs en respectant l'ordre des champs
-        #         attributes = []
-        #         for field in result.fields():
-        #             attributes.append(entity.get(field.name(), None))
-
-        #             feature.setAttributes(attributes)
-        #             provider.addFeatures([feature])
-        
-        # Converts the list of dicts to a list of qgis features
-        #result = list_to_qgis_feature(dends)
         res = list_to_qgis_feature(elim)
-
-
-        #result = QgsVectorLayer("dtcted_de","temp","memory")
-        #list_result = []
-        #for feature in result.getFeatures():
-            #list_result.append(feature)
        
         # Define the output sink
         (sink, dest_id) = self.parameterAsSink(
@@ -553,6 +413,7 @@ class EliminateDeadEnds(QgsProcessingAlgorithm):
             crs=source.sourceCrs()
         )
         
+        # add features to the sink
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
 
         return {

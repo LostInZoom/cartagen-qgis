@@ -224,7 +224,11 @@ class VectorHeatmap(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
+
+        #transform the source into a GeoDataFrame
         points = qgis_source_to_geodataframe(source)
+
+        #retrieve the cliping layer (if provided) and transform it into list of QgsFeature()
         clip_layer = self.parameterAsSource(parameters, self.CLIP, context)
         clip = qgis_source_to_geodataframe(clip_layer)
         clip = clip.to_dict('records')
@@ -232,40 +236,31 @@ class VectorHeatmap(QgsProcessingAlgorithm):
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        #total = 100.0 / source.featureCount() if source.featureCount() else 0
         
+        # Retrieve the other parameters
         cell_size = self.parameterAsInt(parameters, self.CELL_SIZE, context)
         radius = self.parameterAsInt(parameters, self.RADIUS, context)
-
         methods = ['quartic', 'epanechnikov', 'gaussian', 'uniform', 'triangular']
         method = self.parameterAsString(parameters, self.METHOD, context)
         field = self.parameterAsString(parameters, self.FIELD, context)
 
+        
         if not field:
             field = None
 
-        feedback.setProgress(1)
+        feedback.setProgress(1) #set loading bar to 1 %
+        
+        # perform de CartAGen algorithm without the clip parameter (else there is a bug)
         res = heatmap(points, cell_size=cell_size, radius=radius, column=field, method= methods[int(method)])
-        feedback.setProgress(90)
+        
+        feedback.setProgress(90) #set loading bar to 90 %
     
+        #transform the result into a dictionnary, and the dictionnary into a list of QgsFeateur()
         res = res.to_dict('records')
         res = list_to_qgis_feature(res)
         
-        # features = []
-        # fields = source.fields()
-
-        # for entity in res:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
-
+        #clip the heatmap with the cliping layer using the .intersection() method from QGIS
         polygons_cliped = []
 
         for feature1 in res:
@@ -284,16 +279,17 @@ class VectorHeatmap(QgsProcessingAlgorithm):
                 new_feature.setAttributes(feature1.attributes())
                 polygons_cliped.append(new_feature)
 
-        
+        # declare the ouptput sink
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, res[0].fields(), QgsWkbTypes.Polygon, source.sourceCrs())
         
-        # Add a feature in the sink
+        # Add a feature in the sink depending on if a clip layer is provided
         if clip_layer:
             sink.addFeatures(polygons_cliped, QgsFeatureSink.FastInsert)
         else:        
             sink.addFeatures(res, QgsFeatureSink.FastInsert)
-        feedback.setProgress(100)
+
+        feedback.setProgress(100) #set loading bar to 100 %
         return {
             self.OUTPUT: dest_id
         }

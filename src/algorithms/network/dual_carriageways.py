@@ -58,7 +58,7 @@ import geopandas
 
 class DetectDualCarriageways(QgsProcessingAlgorithm):
     """
-  Detect dual carriageways based on geometric properties.
+    Detect dual carriageways based on geometric properties.
 
     This algorithm proposed by Touya :footcite:p:`touya:2010`
     detects the network faces as road separator (*i.e.* separation between
@@ -186,7 +186,7 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
             )
         )
   		        
-       	importance = QgsProcessingParameterString(
+        importance = QgsProcessingParameterString(
             self.IMPORTANCE,
             self.tr('Importance attribute name'),
             optional=True,
@@ -282,18 +282,7 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
         """
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT, context)
-        
-        #layer = QgsVectorLayer("Point", "temp", "memory")
-        #pr = layer.dataProvider()
-        #pr.addAttributes([QgsField("deadend", QVariant.Bool),
-		  #QgsField("face",  QVariant.Int),
-                  #QgsField("deid",  QVariant.Int),
-                  #QgsField("connected", QVariant.Bool),
-                  #QgsField("root", QVariant.Bool),
-                  #QgsField("hole", QVariant.Bool)])
-        #layer.updateFields()
-
-		
+      
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
         gdf = qgis_source_to_geodataframe(source)
         records = gdf.to_dict('records')
@@ -312,6 +301,7 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
         width = self.parameterAsDouble(parameters, self.WIDTH, context)
         huber = self.parameterAsInt(parameters, self.HUBER, context)
 
+        #Set the value of some parameters according to the inputs
         if importance == 'None':
             importance = None
         if value == 99:
@@ -321,52 +311,10 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
         dc = detect_dual_carriageways(gdf, importance = importance, value = value, concavity = concavity,
         elongation = elongation, compactness = compactness, area = area, width = width, huber = huber)
         
-        #try:
+        # Convert the result to a list of dicts
         dc = dc.to_dict('records')
-            # gdf_final = gpd.GeoDataFrame(dc, crs = source.sourceCrs().authid())
-            # layer_final = QgsVectorLayer(gdf_final.to_json())
-        # except AttributeError:
-        #     raise Exception("No dual cariageways detected, try changing parameters")
-            # result = QgsFeature() 
-
-            # dc = [{'area':None,'perimeter':None, 'concavity':None,'elongation':None,'compactness':None,'length':None,'width':None,'huber':None,'cid':None,'geometry':None}]
-            # layer_final = QgsVectorLayer("Polygon","layer_final","memory")
-            # pr = layer_final.dataProvider() # need to create a data provider
-            # pr.addAttributes([QgsField("area",  QVariant.Double)]) # define/add field data type
-            # pr.addAttributes([QgsField("perimeter",  QVariant.Double)])
-            # pr.addAttributes([QgsField("concavity",  QVariant.Double)])
-            # pr.addAttributes([QgsField("elongation",  QVariant.Double)])
-            # pr.addAttributes([QgsField("compactness",  QVariant.Double)])
-            # pr.addAttributes([QgsField("length",  QVariant.Double)])
-            # pr.addAttributes([QgsField("width",  QVariant.Double)])
-            # pr.addAttributes([QgsField("huber",  QVariant.Double)])
-            # pr.addAttributes([QgsField("cid",  QVariant.Int)])
-            # layer_final.updateFields() # tell the vector layer to fetch changes from the provider
-
-        
-        # # Créer une liste de QgsFeature
-        # features = []
-        # fields = layer_final.fields()
-
-        # for entity in dc:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     feature.setAttribute('area', entity['area'])
-        #     feature.setAttribute('perimeter', entity['perimeter'])
-        #     feature.setAttribute('concavity', entity['concavity'])
-        #     feature.setAttribute('elongation', entity['elongation'])
-        #     feature.setAttribute('compactness', entity['compactness'])
-        #     feature.setAttribute('length', entity['length'])
-        #     feature.setAttribute('width', entity['width'])
-        #     feature.setAttribute('huber', entity['huber'])
-        #     feature.setAttribute('cid', entity['cid'])
-
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-                
-        #     features.append(feature)
-        
+          
+        # Manually create an empty QgsFeature() if there are no dual carriageways detected
         if len(dc) == 0:
             fields = QgsFields()
             fields.append(QgsField("area", QVariant.Double))
@@ -384,17 +332,20 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
             QMessageBox.warning(None, "Warning", "No dual carriageways detected, output layer is empty.")
 
         else:    
+            #convert the result to a gdf, then a list of dicts and finally a list of QgsFeature()
             gdf_final = gpd.GeoDataFrame(dc, crs = source.sourceCrs().authid())
             res = gdf_final.to_dict('records')
             res = list_to_qgis_feature(res)
 
+        #Create the output sink
         (sink, dest_id) = self.parameterAsSink(
                 parameters, self.OUTPUT, context,
                 fields=res[0].fields(),
                 geometryType=QgsWkbTypes.Polygon,
                 crs=source.sourceCrs()
             )
-            
+
+        #Add features to the sink    
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
 
         return {
@@ -515,7 +466,7 @@ class CollapseDualCarriageways(QgsProcessingAlgorithm):
             )
         )          
                 
-       	sigma = QgsProcessingParameterNumber(
+        sigma = QgsProcessingParameterNumber(
             self.SIGMA,
                 self.tr('Sigma value'),
                 type=QgsProcessingParameterNumber.Double,
@@ -548,12 +499,14 @@ class CollapseDualCarriageways(QgsProcessingAlgorithm):
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT_ROAD, context)
 
+        # Create the output sink
         (sink, dest_id) = self.parameterAsSink(
                 parameters, self.OUTPUT, context,
                 fields=source.fields(),
                 geometryType=QgsWkbTypes.LineString,
                 crs=source.sourceCrs()
             )
+        
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
         gdf = qgis_source_to_geodataframe(source)
         records = gdf.to_dict('records')
@@ -561,79 +514,36 @@ class CollapseDualCarriageways(QgsProcessingAlgorithm):
         
         gdf = geopandas.GeoDataFrame(records)
     
-        # crs = source.sourceCrs().authid()
-
-        # features = source.getFeatures()
-        # f = []
-        # for feature in features:
-        #     entity = feature.__geo_interface__["properties"]
-           
-        #     entity['geometry'] = loads(feature.geometry().asWkt())
-        #     f.append(entity)
-
-        # gdf = geopandas.GeoDataFrame(f, crs=crs)
-       
-
          # Compute the number of steps to display within the progress bar and
         total = 100.0 / count if count > 0 else 0
         
+        #retrieve the carriageways layer and transform it to a gdf
         dc = self.parameterAsSource(parameters, self.INPUT_CARRIAGEWAYS, context)
         dc = qgis_source_to_geodataframe(dc)
 
+        #retrieve the sigma parameters and prevent it from being 0
         sigma = self.parameterAsDouble(parameters, self.SIGMA, context)
         if sigma == 0:
             sigma = None
+
+        # retrieve parameter
         attr =  self.parameterAsFields(parameters, self.PROPAGATE_ATTRIBUTES, context)
         
+        #perform the CartAGen algorithm
         cllpsed = collapse_dual_carriageways(gdf, dc, sigma=sigma, propagate_attributes=attr)
-      
 
+        # try to convert the result of the algorithm to a list of dicts
+        #if not possible, convert the initial gdf instead
         try:
             cllpsed = cllpsed.to_dict('records')
-            
-            # for dico in cllpsed:
-            #     for attr in dico.keys():
-            #         if dico[attr] != dico[attr]:
-            #             if not attr == 'fid': 
-            #                 print("ici")
-            #                 dico[attr] = QDateTime(1999, 9, 29, 19, 19, 19, 199)
-            # print(type(cllpsed[0]['fid']))
-            #gdf_final = gpd.GeoDataFrame(cllpsed, crs = source.sourceCrs().authid())
-            #layer_final = QgsVectorLayer(gdf_final.to_json())
+          
         except AttributeError:
             cllpsed = gdf.to_dict('records')
-            #gdf_final = gpd.GeoDataFrame(cllpsed, crs = source.sourceCrs().authid())
-            #layer_final = QgsVectorLayer(gdf_final.to_json())
-
-    
-        # Créer une liste de QgsFeature
-        #features = []
-        
+           
+        #Convert the list to a list of QgsFeature()
         res = list_to_qgis_feature_2(cllpsed,source.fields())
 
-
-        # for entity in cllpsed:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         # if entity[fields[i].name()] != entity[fields[i].name()]:
-        #         #     entity[fields[i].name()] = None
-                
-               
-        #         #     except:
-        #         #         entity[fields[i].name()] = True|feature.setAttribute(fields[i].name(), entity[fields[i].name()])    
-        #         # # if isinstance(entity[fields[i].name()], QDateTime):
-        #         #     if entity[fields[i].name()] == str('nan'):
-        #         #         print('ici')
-        #         #         entity[fields[i].name()] = 0 
-                
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-                
-        #     features.append(feature)
-            
+        #Add features to the sink    
         sink.addFeatures(res, QgsFeatureSink.FastInsert)       
 
         return {

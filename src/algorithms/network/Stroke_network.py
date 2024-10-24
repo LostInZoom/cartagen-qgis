@@ -134,66 +134,23 @@ class BuildStrokes(QgsProcessingAlgorithm):
         records = gdf.to_dict('records')
         count = len(records)
 
-        feedback.setProgress(1)
-        # # Define the output sink
-        # (sink, dest_id) = self.parameterAsSink(
-        #     parameters, self.OUTPUT, context,
-        #     fields=source.fields(),
-        #     geometryType=QgsWkbTypes.Polygon,
-        #     crs=source.sourceCrs()
-        # )
-
+        feedback.setProgress(1) # set the loading bar to 1 %
+    
         # Compute the number of steps to display within the progress bar and
-        total = 100.0 / count if count > 0 else 0
+        # total = 100.0 / count if count > 0 else 0
         
         # Retrieve parameters
         deviat_angle = self.parameterAsDouble(parameters, self.DEVIAT_ANGLE, context)
         deviat_sum = self.parameterAsDouble(parameters, self.DEVIAT_SUM, context)
-
         attr =  self.parameterAsFields(parameters, self.ATTRIBUTES_NAMES, context)
-        #print(attr)
+     
         # Actual algorithm
-
         gdf = strokes_roads(gdf, attr, angle=deviat_angle, angle_sum=deviat_sum)
-        feedback.setProgress(95)
-        # sn=StrokeNetwork(gdf,attr)
+        feedback.setProgress(95) # set the loading bar to 95 %
 
-        # sn.buildStrokes(attr, deviat_angle,deviat_sum)
-        # array=sn.reconstruct_strokes()
-        # gdf = geopandas.GeoDataFrame(array,  columns = ['id','geom',"section"],crs="epsg:2154",geometry="geom") 
-        # gdf.rename_geometry('geometry', inplace=True)
-
-
-        # Converts the list of dicts to a list of qgis features
-        #result = list_to_qgis_feature(roundabouts)
-        
+        # Converts the gdf into a list of dicts, and this list into a list of qgis features
         res = gdf.to_dict('records')
         res = list_to_qgis_feature(res)
-        #  # Définir les champs
-        # fields = source.fields()
-        # fields.append(QgsField("id",  QVariant.Int))
-        # fields.append(QgsField("section",  QVariant.Int))
-
-        # # Créer une liste de QgsFeature
-        # features = []
-
-        # for entity in res:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geom']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
-
-
-        #result = QgsVectorLayer("dtcted_de","temp","memory")
-        #list_result = []
-        #for feature in result.getFeatures():
-            #list_result.append(feature)
        
         # Define the output sink
         (sink, dest_id) = self.parameterAsSink(
@@ -203,8 +160,11 @@ class BuildStrokes(QgsProcessingAlgorithm):
             crs=source.sourceCrs()
         )
         
+        #add features to the sink
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
-        feedback.setProgress(100)
+        
+        feedback.setProgress(100) # set the loading bar to 100 %
+        
         return {
             self.OUTPUT: dest_id
         }

@@ -126,7 +126,6 @@ class MorphologicalAmalgamation(QgsProcessingAlgorithm):
         """
         return self.tr("Amalgamate buildings using dilation and erosion.\nThe amalgamation algorithm proposed by Damen et al. is based on morphological dilations and erosions with a square cap. It is particularly useful to keep the overall shape of building blocks.\nBuffer : size of the buffer used for dilation (in meters). Buildings closer than 2 times the buffer size are amalgamated.\nEdge length : minimum length of edges in the amalgamated geometries (a simplification process is carried out).")
         
-
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
 
@@ -207,18 +206,22 @@ class MorphologicalAmalgamation(QgsProcessingAlgorithm):
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        # total = 100.0 / source.featureCount() if source.featureCount() else 0
        
+        # Retrieve the network and transform it into a list of GeoDataFrame
         networks = self.parameterAsLayerList(parameters, self.INPUT_NETWORK_PART, context)
         gdf_list_networks = []
         for i in networks:
             gdf_list_networks.append(qgis_source_to_geodataframe(i))
         
+        # Retrieve the other parameter values 
         activate_network_part = self.parameterAsBoolean(parameters, self.NETWORK_PARTITIONING_TF, context)
         network_part = self.parameterAsLayerList(parameters, self.INPUT_NETWORK_PART, context)
         buffer = self.parameterAsDouble(parameters, self.BUFFER, context)
         edge_length = self.parameterAsDouble(parameters, self.EDGE_LENGTH, context)
 
+        # Use the CartAGen algorithm with or without network partitionning
+        # Convert the result to a list of QgsFeature()
         if len(network_part) == 0 or activate_network_part == False:
             amal = morphological_amalgamation(list(gdf.geometry),buffer = buffer, edge_length = edge_length)
             
@@ -235,10 +238,10 @@ class MorphologicalAmalgamation(QgsProcessingAlgorithm):
                 gdf = gdf.iloc[part[0][i]]
                 try:
                     generalized = morphological_amalgamation(list(gdf.geometry), buffer = buffer, edge_length = edge_length)
-                    print("là")
+                    
                 except: 
                     generalized = gdf.geometry
-                    print("ici")
+            
                 list_gdf.append(geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(generalized)))
             combined_gdf = pandas.concat(list_gdf, ignore_index=True)
             combined_gdf = geopandas.GeoDataFrame(combined_gdf, geometry='geometry')  
@@ -246,22 +249,7 @@ class MorphologicalAmalgamation(QgsProcessingAlgorithm):
             res = list_to_qgis_feature(res)  
 
         
-
-        # features = []
-        # fields = source.fields()
-
-        # for entity in res:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
-        
+        # Create the output sink
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, source.fields(), source.wkbType(), source.sourceCrs())
         

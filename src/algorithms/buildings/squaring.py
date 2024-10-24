@@ -181,6 +181,8 @@ class SquaringQGIS(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
+
+        # Create an output sink
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, source.fields(), source.wkbType(), source.sourceCrs())
 
@@ -189,6 +191,7 @@ class SquaringQGIS(QgsProcessingAlgorithm):
         total = 100.0 / source.featureCount() if source.featureCount() else 0
         features = source.getFeatures()
 
+        #Retrieve the parameter values
         maxiter = self.parameterAsInt(parameters, self.MAX_ITERATION, context)
         normtol = self.parameterAsInt(parameters, self.NORM_TOLERANCE, context)
         rtol = self.parameterAsDouble(parameters, self.RIGHT_TOLERANCE, context)
@@ -199,6 +202,7 @@ class SquaringQGIS(QgsProcessingAlgorithm):
         wflat = self.parameterAsInt(parameters, self.WEIGHT_FLAT, context)
         whright = self.parameterAsInt(parameters, self.WEIGHT_HALF_RIGHT, context)
 
+        # Use the Cartagen algorithm
         sq = Squarer(
             max_iteration=maxiter, norm_tolerance=normtol,
             right_tolerance=rtol, flat_tolerance=ftol, half_right_tolerance=hrtol,

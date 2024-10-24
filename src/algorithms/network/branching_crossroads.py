@@ -201,7 +201,7 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
             )
         )          
                 
-       	area_threshold = QgsProcessingParameterNumber(
+        area_threshold = QgsProcessingParameterNumber(
             self.AREA_THRESHOLD,
                 self.tr('Area threshold'),
                 type=QgsProcessingParameterNumber.Double,
@@ -271,17 +271,18 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
         records = gdf.to_dict('records')
         count = len(records)
 
-         # Compute the number of steps to display within the progress bar and
-        total = 100.0 / count if count > 0 else 0
+        # Compute the number of steps to display within the progress bar and
+        #total = 100.0 / count if count > 0 else 0
         
+        # retrieve the other input
         rb = self.parameterAsSource(parameters, self.INPUT_ROUNDABOUT, context)
-
         allow_mid_node = self.parameterAsBoolean(parameters, self.ALLOW_MIDDLE_NODE, context)
         allow_4degree = self.parameterAsBoolean(parameters, self.ALLOW_SINGLE_4DEGREE_NODE, context)
         max_dist_area = self.parameterAsDouble(parameters, self.MAXIMUM_DISTANCE_AREA, context)
         mid_angle_tolerance = self.parameterAsDouble(parameters, self.MIDDLE_ANGLE_TOLERANCE, context)
         area_thrshld = self.parameterAsDouble(parameters, self.AREA_THRESHOLD, context)
 
+        #Perform the CartAGen algorithm with or without the roundabount input
         if rb:
             rb = qgis_source_to_geodataframe(rb)
           
@@ -292,10 +293,11 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
             br = detect_branching_crossroads(gdf, area_threshold = area_thrshld, maximum_distance_area = max_dist_area, 
                                               allow_middle_node = allow_mid_node, middle_angle_tolerance = mid_angle_tolerance, allow_single_4degree_node = allow_4degree)
        
+        #converte the result to a list of dictionnaries
         br = br.to_dict('records')
         
-        if len(br) == 0:
-           
+        # Manually create an empty QgsFeature() if there are no branching crossroads detected
+        if len(br) == 0:    
             fields = QgsFields()
             fields.append(QgsField("distance_area", QVariant.Double))
             fields.append(QgsField("cid",  QVariant.Int))
@@ -307,53 +309,23 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
 
             QMessageBox.warning(None, "Warning", "No branching crossroads detected, output layer is empty.")
 
-        else:    
+        else:   
+            #convert the result to a GeoDataFrame
             gdf_final = gpd.GeoDataFrame(br, crs = source.sourceCrs().authid())
+            # and then to a list of dicts
             res = gdf_final.to_dict('records')
+            # and finally to a list of QgsFeature()
             res = list_to_qgis_feature(br)
-            # gdf_final = gpd.GeoDataFrame(br, crs = source.sourceCrs().authid())
-            # layer_final = QgsVectorLayer(gdf_final.to_json())
-       
-            #br = [{'roundabout':None,'middle':None, 'type':None,'distance_area':None,'cid':None,'geometry':None}]
-            #{'geometry': loads('POLYGON ((483096.7768934701 6044753.445705255, 483092.1604210931 6044760.958789463, 483097.4000118249 6044763.99210823, 483096.7768934701 6044753.445705255))'), 'roundabout': -1, 'middle': -1, 'type': '3 nodes single 4 degree', 'distance_area': 0.06479616236533992, 'cid': 0}
-            #res = list_to_qgis_feature(br)
-            # br = [{'roundabout':None,'middle':None, 'type':None,'distance_area':None,'cid':None,'geometry':None}]
-            # layer_final = QgsVectorLayer("Polygon","layer_final","memory")
-            # pr = layer_final.dataProvider() # need to create a data provider
-            # pr.addAttributes([QgsField("roundabout",  QVariant.Int)]) # define/add field data type
-            # pr.addAttributes([QgsField("middle",  QVariant.Int)])
-            # pr.addAttributes([QgsField("type",  QVariant.String)])
-            # pr.addAttributes([QgsField("distance_area",  QVariant.Double)])
-            # pr.addAttributes([QgsField("cid",  QVariant.Int)])
-            # layer_final.updateFields() # tell the vector layer to fetch changes from the provider
-
-        
-        # Créer une liste de QgsFeature
-        # features = []
-        # fields = layer_final.fields()
-
-        # for entity in br:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     feature.setAttribute('roundabout', entity['roundabout'])
-        #     feature.setAttribute('middle', entity['middle'])
-        #     feature.setAttribute('type', entity['type'])
-        #     feature.setAttribute('distance_area', entity['distance_area'])
-        #     feature.setAttribute('cid', entity['cid'])
-
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-                
-        #     features.append(feature)
-
+          
+        #Create the output sink
         (sink, dest_id) = self.parameterAsSink(
                 parameters, self.OUTPUT, context,
                 fields=res[0].fields(),
                 geometryType=QgsWkbTypes.Polygon,
                 crs=source.sourceCrs()
             )
-            
+
+        #Add features in the output sink   
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
 
         return {
@@ -498,7 +470,7 @@ class CollapseBranchingCrossroads(QgsProcessingAlgorithm):
             )
         )          
                 
-       	maximum_area = QgsProcessingParameterNumber(
+        maximum_area = QgsProcessingParameterNumber(
             self.MAXIMUM_AREA,
                 self.tr('Maximum area'),
                 type=QgsProcessingParameterNumber.Double,
@@ -531,62 +503,29 @@ class CollapseBranchingCrossroads(QgsProcessingAlgorithm):
         count = len(records)
 
          # Compute the number of steps to display within the progress bar and
-        total = 100.0 / count if count > 0 else 0
+         #total = 100.0 / count if count > 0 else 0
         
+        # retrieve the branching crossroads layerand converts it to gdf
         bc = self.parameterAsSource(parameters, self.INPUT_BRANCHING_CROSSROADS, context)
         bc = qgis_source_to_geodataframe(bc)
 
+        # retrieve max_area parameter value
         max_area = self.parameterAsDouble(parameters, self.MAXIMUM_AREA, context)
 
+        #CartAGen's algorithm
         cllpsed = collapse_branching_crossroads(gdf, bc, maximum_area=max_area)
         
+        #try to convert the result to a list of dicts. If not possible, convert the initial road network instead
         try:
             cllpsed = cllpsed.to_dict('records')
             
-            # for dico in cllpsed:
-            #     for attr in dico.keys():
-            #         if dico[attr] != dico[attr]:
-            #             if not attr == 'fid': 
-            #                 print("ici")
-            #                 dico[attr] = QDateTime(1999, 9, 29, 19, 19, 19, 199)
-            # print(type(cllpsed[0]['fid']))
-            #gdf_final = gpd.GeoDataFrame(cllpsed, crs = source.sourceCrs().authid())
-            #layer_final = QgsVectorLayer(gdf_final.to_json())
         except AttributeError:
             cllpsed = gdf.to_dict('records')
-            #gdf_final = gpd.GeoDataFrame(cllpsed, crs = source.sourceCrs().authid())
-            #layer_final = QgsVectorLayer(gdf_final.to_json())
-   
-        # # Créer une liste de QgsFeature
-        # features = []
-        
-        # fields = source.fields()
-
-
-        # for entity in cllpsed:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         if entity[fields[i].name()] != entity[fields[i].name()]:
-        #             entity[fields[i].name()] = None
-                
-               
-        #         #     except:
-        #         #         entity[fields[i].name()] = True|feature.setAttribute(fields[i].name(), entity[fields[i].name()])    
-        #         # # if isinstance(entity[fields[i].name()], QDateTime):
-        #         #     if entity[fields[i].name()] == str('nan'):
-        #         #         print('ici')
-        #         #         entity[fields[i].name()] = 0 
-                
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-                
-        #     features.append(feature)
-        
+           
+        # Convert this list to a list of QgsFeature()
         res = list_to_qgis_feature(cllpsed)
 
+        # Create the ouptput sink
         (sink, dest_id) = self.parameterAsSink(
                 parameters, self.OUTPUT, context,
                 fields=res[0].fields(),
@@ -594,6 +533,7 @@ class CollapseBranchingCrossroads(QgsProcessingAlgorithm):
                 crs=source.sourceCrs()
             )  
 
+        # Add features to the output sink
         sink.addFeatures(res, QgsFeatureSink.FastInsert)       
 
         return {

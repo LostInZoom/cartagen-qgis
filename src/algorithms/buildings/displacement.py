@@ -204,21 +204,21 @@ class BuildingDisplacementRandomQGIS(QgsProcessingAlgorithm):
         total = 100.0 / source.featureCount() if source.featureCount() else 0
         features = source.getFeatures()
 
+        # Retrieve the network and transform it into a list of GeoDataFrame
         networks = self.parameterAsLayerList(parameters, self.INPUT_NETWORK_PART, context)
         gdf_list_networks = []
         for i in networks:
             gdf_list_networks.append(qgis_source_to_geodataframe(i))
 
-        
+        # Retrieve the other parameter values 
         max_displ = self.parameterAsDouble(parameters, self.MAX_DISPLACEMENT, context)
         maxtrials = self.parameterAsInt(parameters, self.MAX_TRIALS, context)
         poly_dist = self.parameterAsDouble(parameters, self.POLYGON_DISTANCE, context)
         network_dist = self.parameterAsDouble(parameters, self.NETWORK_DISTANCE, context)
-
         activate_network_part = self.parameterAsBoolean(parameters, self.NETWORK_PARTITIONING_TF, context)
-
         network_part = self.parameterAsLayerList(parameters, self.INPUT_NETWORK_PART, context)
 
+        # Use the CartAGen algorithm with or without network partitionning
         if len(network_part) == 0 or activate_network_part == False:
             d = random_displacement(polygons=gdf, networks=gdf_list_networks, polygon_distance=poly_dist, 
                                              network_distance=network_dist, max_trials=maxtrials, max_displacement=max_displ)
@@ -230,12 +230,12 @@ class BuildingDisplacementRandomQGIS(QgsProcessingAlgorithm):
             d = random_displacement(polygons=gdf, networks=gdf_list_networks, polygon_distance=poly_dist, 
                                              network_distance=network_dist, max_trials=maxtrials, max_displacement=max_displ, network_partitioning=[network_part_gdf])
         
-        
+        # Convert the result to a list of dictionnaries
         d = d.to_dict('records')
 
+        #Convert the list to a list of QgsFeature() (TO-DO : use the converter.py instead)
         features = []
         fields = source.fields()
-
         for entity in d:
             feature = QgsFeature()
             feature.setFields(fields)
@@ -248,74 +248,13 @@ class BuildingDisplacementRandomQGIS(QgsProcessingAlgorithm):
             
             features.append(feature)
         
+        # Create the output sink
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, features[0].fields(), source.wkbType(), source.sourceCrs())
         
         # Add a feature in the sink
         sink.addFeatures(features, QgsFeatureSink.FastInsert)
 
-        ##########################################################
-
-        # d = random_displacement(
-        #     max_trials=maxtrials,
-        #     max_displacement=maxdisp,
-        #     network_partitioning=networkpart
-        # )
-
-        # buildings = []
-        # attributes = []
-        # for f in features:
-        #     attributes.append(f.attributes())
-        #     wkt = f.geometry().asWkt()
-        #     shapely_geom = loads(wkt)
-        #     buildings.append(shapely_geom)
-
-        # buildings_geo = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(buildings))
-
-        # roads = []
-        # for r in roads_source.getFeatures():
-        #     wkt = r.geometry().asWkt()
-        #     shapely_geom = loads(wkt)
-        #     roads.append(shapely_geom)
-
-        # roads_geo = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(roads))
-
-        # rivers = []
-        # for r in rivers_source.getFeatures():
-        #     wkt = r.geometry().asWkt()
-        #     shapely_geom = loads(wkt)
-        #     rivers.append(shapely_geom)
-
-        # rivers_geo = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(rivers))
-
-        # simplified = None
-        # if networkpart:
-        #     network_list = []
-        #     for layer in network:
-        #         shapes = []
-        #         for n in layer.getFeatures():
-        #             wkt = n.geometry().asWkt()
-        #             shapely_geom = loads(wkt)
-        #             shapes.append(shapely_geom)
-        #         layer_geo = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(shapes))
-        #         network_list.append(layer_geo)
-        #     simplified = d.displace(buildings_geo, roads_geo, rivers_geo, *network_list)
-        # else:
-        #     simplified = d.displace(buildings_geo, roads_geo, rivers_geo)
-
-        # for i, simple in simplified.iterrows():
-        #     result = QgsFeature()
-        #     result.setGeometry(QgsGeometry.fromWkt(Polygon(simple.geometry).wkt))
-        #     result.setAttributes(attributes[i])
-
-        
-
-        # Return the results of the algorithm. In this case our only result is
-        # the feature sink which contains the processed features, but some
-        # algorithms may return multiple feature sinks, calculated numeric
-        # statistics, etc. These should all be included in the returned
-        # dictionary, with keys matching the feature corresponding parameter
-        # or output names.
         return {
             self.OUTPUT: dest_id
         }

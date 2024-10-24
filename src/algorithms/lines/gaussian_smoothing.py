@@ -193,12 +193,15 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
         
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        #total = 100.0 / source.featureCount() if source.featureCount() else 0
         
+        # retrieve the other parameters values
         sigma = self.parameterAsDouble(parameters, self.SIGMA, context)
         sample = self.parameterAsDouble(parameters, self.SAMPLE, context)
         densify = self.parameterAsBoolean(parameters, self.DENSIFY, context)
 
+        #Using CartAGen algorithm and transforming the result to a list of QgsFeature()
+        #Depending on the type of geometry of the input data
         if source.wkbType().name == 'Polygon':
             gs = gdf.copy()
             for i in range(len(gdf)):
@@ -223,22 +226,7 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
             res = gs.to_dict('records')
             res = list_to_qgis_feature_2(res,source.fields())
 
-     
-        # features = []
-        # fields = source.fields()
-
-        # for entity in res:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
-        
+        # Create the output sink    
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, res[0].fields(), source.wkbType(), source.sourceCrs())
         

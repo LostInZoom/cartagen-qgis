@@ -166,7 +166,7 @@ class ReduceKmeans(QgsProcessingAlgorithm):
             )
         )
 
-        
+         # field selector
         field = QgsProcessingParameterField(
                 self.FIELD,
                 'Value field',
@@ -178,6 +178,7 @@ class ReduceKmeans(QgsProcessingAlgorithm):
         field.setFlags(field.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
         self.addParameter(field)
 
+        # float number
         ratio = QgsProcessingParameterNumber(
             self.RATIO,
             self.tr('Ratio of retained points'),
@@ -188,8 +189,8 @@ class ReduceKmeans(QgsProcessingAlgorithm):
         self.addParameter(ratio)
 
        
+        # option selection in a list
         modes = ['selection', 'simplification', 'aggregation']
-        
         mode = QgsProcessingParameterEnum(
                 self.MODE,
                 'Select a mode',
@@ -217,17 +218,23 @@ class ReduceKmeans(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
+
+        # transform the source into gdf
         points = qgis_source_to_geodataframe(source)
-        modes = ['selection', 'simplification', 'aggregation']
-        # Compute the number of steps to display within the progress bar and
-        # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
-        
+
+        ## Compute the number of steps to display within the progress bar and
+        ## get features from source
+        # total = 100.0 / source.featureCount() if source.featureCount() else 0 
+
+        # Retrieve the other parameters
+        modes = ['selection', 'simplification', 'aggregation'] 
         field = self.parameterAsString(parameters, self.FIELD, context)
         ratio = self.parameterAsDouble(parameters, self.RATIO, context)
         mode = self.parameterAsString(parameters, self.MODE, context)
         
-        feedback.setProgress(1)
+        feedback.setProgress(1) #start the loading bar at 1 %
+
+        # use the version of the CartAGen's algorithm according to selected mode
         if mode == "1":
             res = reduce_kmeans(points, ratio = ratio, mode = modes[1])
             fields = source.fields()
@@ -244,32 +251,21 @@ class ReduceKmeans(QgsProcessingAlgorithm):
                 res = reduce_kmeans(points, ratio = ratio, mode = modes[2])
                 fields = QgsFields()
                 fields.append(QgsField("count",  QVariant.Int))
-        feedback.setProgress(90)
+        
+        feedback.setProgress(90) #start the loading bar at 90 %
 
+        #transform the output into a dictionnary, and the dictionnary into a list of QgsFeature()
         res = res.to_dict('records')
         res = list_to_qgis_feature_2(res,fields)
      
-        # features = []
-        # fields = source.fields()
-
-        # for entity in res:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
-        
+        # declare the sink
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, res[0].fields(), source.wkbType(), source.sourceCrs())
         
         # Add a feature in the sink
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
         feedback.setProgress(100)
+       
         return {
             self.OUTPUT: dest_id
         }
@@ -419,8 +415,7 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
         )
         self.addParameter(height)
 
-        modes = ['selection', 'simplification', 'aggregation']
-        
+        modes = ['selection', 'simplification', 'aggregation'] 
         mode = QgsProcessingParameterEnum(
                 self.MODE,
                 'Select a mode',
@@ -471,20 +466,24 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        #transform the source into GeoDataFrame
         points = qgis_source_to_geodataframe(source)
-        shapes = ['square','diamond','hexagonal']
+
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        #total = 100.0 / source.featureCount() if source.featureCount() else 0
         
+        # retrieve the values of the inputs
         field = self.parameterAsString(parameters, self.FIELD, context)
         width = self.parameterAsDouble(parameters, self.WIDTH, context)
         height = self.parameterAsDouble(parameters, self.HEIGHT, context)
         mode = self.parameterAsString(parameters, self.MODE, context)
         shape = self.parameterAsInt(parameters, self.SHAPE, context)
+        shapes = ['square','diamond','hexagonal']
         grid = self.parameterAsBoolean(parameters, self.GRID, context)
 
-        feedback.setProgress(1)
+        feedback.setProgress(1) #set the loading bar to 1%
+        #Use the right version of the CartAGen algorithm, depending on the inputs values
         if mode == "1":
             res = reduce_labelgrid(points, width = width, height= height, shape=shapes[shape], mode = "simplification", grid=grid)
             fields = source.fields()
@@ -513,32 +512,21 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
                 if grid == True:
                     res_2 = res[1]
                     res = res[0]
-        feedback.setProgress(90)
 
+        feedback.setProgress(90) #set the loading bar to 90%
+
+        #transform the result into a dictionnary, and the dictionnary into a list of QgsFeature()
         res = res.to_dict('records')
         res = list_to_qgis_feature_2(res,fields)
      
-        # features = []
-        # fields = source.fields()
-
-        # for entity in res:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
-        
+        # Declare the ouptut sink   
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, res[0].fields(), source.wkbType(), source.sourceCrs())
         
         # Add a feature in the sink
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
         
+        # Add a second sink if the grid option is set to True
         if grid == True:
             res_2 = res_2.to_dict('records')
             res_2 = list_to_qgis_feature(res_2)
@@ -547,7 +535,7 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
                 context, res_2[0].fields(), QgsWkbTypes.Polygon, source.sourceCrs())
             sink_2.addFeatures(res_2, QgsFeatureSink.FastInsert)
 
-        feedback.setProgress(100)
+        feedback.setProgress(100) #set the loading bar to 100%
         return {
             self.OUTPUT: dest_id,
             self.OUTPUT_2: dest_id
@@ -684,7 +672,6 @@ class ReduceQuadtree(QgsProcessingAlgorithm):
         self.addParameter(depth)
 
         modes = ['selection', 'simplification', 'aggregation']
-        
         mode = QgsProcessingParameterEnum(
                 self.MODE,
                 'Select a mode',
@@ -726,20 +713,22 @@ class ReduceQuadtree(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
-        points = qgis_source_to_geodataframe(source)
+        points = qgis_source_to_geodataframe(source) #transform the source into GeoDataFrame
     
       
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        # total = 100.0 / source.featureCount() if source.featureCount() else 0
         
+        #retrieve other inputs
         field = self.parameterAsString(parameters, self.FIELD, context)
         depth = self.parameterAsInt(parameters, self.DEPTH, context)
         mode = self.parameterAsString(parameters, self.MODE, context)
         qtree = self.parameterAsBoolean(parameters, self.QTREE, context)
         
-        feedback.setProgress(1)
+        feedback.setProgress(1) #set the loading bar to 1 %
         
+        # perform the right version of the CartAGen algorithm according to the parameters
         if mode == "1":
             res = reduce_quadtree(points, depth= depth, mode = 'simplification', quadtree=qtree)
             fields = source.fields()
@@ -769,29 +758,17 @@ class ReduceQuadtree(QgsProcessingAlgorithm):
                     res_2 = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res[1].geometry()))
                     res = res[0]
 
-        feedback.setProgress(90)
+        feedback.setProgress(90) #set the loading bar to 90 %
 
+        #transform the result gdf in a into a dictionnary, and the dictionnary into a list of QgsFeature()
         res = res.to_dict('records')
         res = list_to_qgis_feature_2(res,fields)
      
-        # features = []
-        # fields = source.fields()
-
-        # for entity in res:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     for i in range(len(fields)):
-        #         feature.setAttribute(fields[i].name(), entity[fields[i].name()])
-            
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
-        
+        # Define the output sink
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, res[0].fields(), source.wkbType(), source.sourceCrs())
         
+        # if the qtree parameter is set to True, a second sink is added
         if qtree == True:
             res_2 = res_2.to_dict('records')
             res_2 = list_to_qgis_feature(res_2)
@@ -803,7 +780,7 @@ class ReduceQuadtree(QgsProcessingAlgorithm):
         # Add a feature in the sink
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
         
-        feedback.setProgress(100)
+        feedback.setProgress(100) #set the loading bar to 100 %
         
         return {
             self.OUTPUT: dest_id,

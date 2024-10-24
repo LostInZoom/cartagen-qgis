@@ -149,14 +149,7 @@ class DetectRoundaboutsQGIS(QgsProcessingAlgorithm):
         gdf = qgis_source_to_geodataframe(source)
         records = gdf.to_dict('records')
         count = len(records)
-        feedback.setProgress(1)
-        # # Define the output sink
-        # (sink, dest_id) = self.parameterAsSink(
-        #     parameters, self.OUTPUT, context,
-        #     fields=source.fields(),
-        #     geometryType=QgsWkbTypes.Polygon,
-        #     crs=source.sourceCrs()
-        # )
+        feedback.setProgress(1) # set the loading bar to 1 %
 
         # Compute the number of steps to display within the progress bar and
         total = 100.0 / count if count > 0 else 0
@@ -188,41 +181,22 @@ class DetectRoundaboutsQGIS(QgsProcessingAlgorithm):
             # Update the progress bar
             feedback.setProgress(int(current * total))
            
-        # Converts the list of dicts to a list of qgis features
-        #result = list_to_qgis_feature(roundabouts)
-        if len(roundabouts) == 0:
-            #roundabouts = [{'index':None,'cid':None,'geometry':None}]
-            #res = list_to_qgis_feature(roundabouts)
+        if len(roundabouts) == 0: #manually create fields if no roundabout is detected
             fields = QgsFields()
             fields.append(QgsField("index", QVariant.Double))
             fields.append(QgsField("cid",  QVariant.Int))
             
-            res = [QgsFeature(fields)]
+            res = [QgsFeature(fields)] #create a list of empty QgsFeature with the created fields
 
             QMessageBox.warning(None, "Warning", "No roundabouts detected, output layer is empty.")
 
         else:    
+            #convert the result to a GeoDataFrame, and this gdf into a list of dicts and then a list of QgsFeature()
             gdf_final = gpd.GeoDataFrame(roundabouts, crs = source.sourceCrs().authid())
             res = gdf_final.to_dict('records')
             res = list_to_qgis_feature(res)
-        # layer_final = QgsVectorLayer(gdf_final.to_json())
-
-        # # Créer une liste de QgsFeature
-        # features = []
-        # fields = layer_final.fields()
-
-        # for entity in roundabouts:
-        #     feature = QgsFeature()
-        #     feature.setFields(fields)
-        #     feature.setAttribute('cid', entity['cid'])
-        #     feature.setAttribute('index', entity['index'])
-
-        #     # Si votre entité a une géométrie (par exemple, des coordonnées x et y)
-        #     geom = QgsGeometry.fromWkt(str(entity['geometry']))
-        #     feature.setGeometry(geom)
-            
-        #     features.append(feature)
-
+       
+        #Create the feature sink
         (sink, dest_id) = self.parameterAsSink(
             parameters, self.OUTPUT, context,
             fields=res[0].fields(),
@@ -230,17 +204,9 @@ class DetectRoundaboutsQGIS(QgsProcessingAlgorithm):
             crs=source.sourceCrs()
         )
         
+        #Add features to the sink
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
 
-        # # Add a feature in the sink
-        # sink.addFeature(result, QgsFeatureSink.FastInsert)
-
-        # Return the results of the algorithm. In this case our only result is
-        # the feature sink which contains the processed features, but some
-        # algorithms may return multiple feature sinks, calculated numeric
-        # statistics, etc. These should all be included in the returned
-        # dictionary, with keys matching the feature corresponding parameter
-        # or output names.
         return {
             self.OUTPUT: dest_id
         }
@@ -434,6 +400,7 @@ class CollapseRoundaboutsQGIS(QgsProcessingAlgorithm):
         rb = self.parameterAsSource(parameters, self.INPUT_ROUNDABOUTS, context)
         rb = qgis_source_to_geodataframe(rb)
 
+        # Use the CartAGen algorithm with the right parameter accordingto the inputs
         if self.parameterAsSource(parameters, self.INPUT_CROSSROADS, context):
             cr = self.parameterAsSource(parameters, self.INPUT_CROSSROADS, context)
             cr = qgis_source_to_geodataframe(cr)
@@ -442,21 +409,15 @@ class CollapseRoundaboutsQGIS(QgsProcessingAlgorithm):
         else:
             cllpsed = collapse_roundabouts(gdf,rb,maximum_diameter= maximum_diameter)
         
+        # convert the resultto a list of dictionnaries
         cllpsed = cllpsed.to_dict('records')
 
         # Converts the list of dicts to a list of qgis features
         result = list_to_qgis_feature_2(cllpsed,source.fields())
+
+        # Add features to the sink
         sink.addFeatures(result, QgsFeatureSink.FastInsert)
         
-        # # Add a feature in the sink
-        #sink.addFeature(result, QgsFeatureSink.FastInsert)
-
-        # Return the results of the algorithm. In this case our only result is
-        # the feature sink which contains the processed features, but some
-        # algorithms may return multiple feature sinks, calculated numeric
-        # statistics, etc. These should all be included in the returned
-        # dictionary, with keys matching the feature corresponding parameter
-        # or output names.
         return {
             self.OUTPUT: dest_id
         }

@@ -110,6 +110,7 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
             wkt = feature.geometry().asWkt()
             shapely_geom = loads(wkt)
 
+            # CartAGen's algorithm
             simplified = visvalingam_whyatt(shapely_geom, self.parameterAsInt(parameters,self.TOLERANCE,context))
 
             result = QgsFeature()
