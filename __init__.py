@@ -1,6 +1,6 @@
 __author__ = 'Guillaume Touya, Justin Berli & Paul Bourcier'
 __date__ = '2023-05-11'
-__copyright__ = '(C) 2023 by Guillaume Touya, Justin Berli & Paul Bourcier'
+__copyright__ = '(C) 2025 by Guillaume Touya, Justin Berli & Paul Bourcier'
 
 import os
 import cartagen4qgis.cartagen
