@@ -35,11 +35,11 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas
+import geopandas as gpd
 import pandas
 from cartagen4qgis import PLUGIN_ICON
 from cartagen import close_polygon
-from cartagen4qgis.src.tools import *
+from cartagen4qgis.src.tools import list_to_qgis_feature_2
 
 from shapely import Polygon
 from shapely.wkt import loads
@@ -180,7 +180,7 @@ Parameters:
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT_POLYGONS, context)
-        gdf = qgis_source_to_geodataframe(source)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
 
         # Compute the number of steps to display within the progress bar and
         # get features from source

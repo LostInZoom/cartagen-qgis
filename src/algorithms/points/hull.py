@@ -37,11 +37,11 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas
+import geopandas as gpd
 import pandas
 from cartagen4qgis import PLUGIN_ICON
 from cartagen import hull_delaunay, hull_swinging_arm
-from cartagen4qgis.src.tools import *
+from cartagen4qgis.src.tools import list_to_qgis_feature
 
 from shapely import Polygon
 from shapely.wkt import loads
@@ -175,7 +175,7 @@ class HullDelaunay(QgsProcessingAlgorithm):
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
         #transform the source into a GeoDataFrame
-        points = qgis_source_to_geodataframe(source)
+        points = gpd.GeoDataFrame.from_features(source.getFeatures())
         
         # Compute the number of steps to display within the progress bar and
         # get features from source
@@ -195,7 +195,7 @@ class HullDelaunay(QgsProcessingAlgorithm):
         feedback.setProgress(90) #set the loading bar to 90%
         
         # Convert the result to a gdf, the gdf to a dictionnary, and the dictionnary to a lsit of QgsFeature()
-        res = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res))
+        res = gpd.GeoDataFrame(geometry=gpd.GeoSeries(res))
         res = res.to_dict('records')
         res = list_to_qgis_feature(res)
         
@@ -353,7 +353,7 @@ class HullSwingingArm(QgsProcessingAlgorithm):
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
         #transform the source to a GeoDataFrame
-        points = qgis_source_to_geodataframe(source)
+        points = gpd.GeoDataFrame.from_features(source.getFeatures())
         
         # Compute the number of steps to display within the progress bar and
         # get features from source
@@ -375,7 +375,7 @@ class HullSwingingArm(QgsProcessingAlgorithm):
         feedback.setProgress(90) #set loading bar to 90 %
         
         #transform the result into a gdf, the gdf into a dictionnary, and the dictionnary into a list of QgsFeature()
-        res = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res))
+        res = gpd.GeoDataFrame(geometry=gpd.GeoSeries(res))
         res = res.to_dict('records')
         res = list_to_qgis_feature(res)
      

@@ -35,11 +35,11 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas
+import geopandas as gpd
 import pandas
 from cartagen4qgis import PLUGIN_ICON
 from cartagen import boffet_areas, partition_networks
-from cartagen4qgis.src.tools import *
+from cartagen4qgis.src.tools import list_to_qgis_feature
 
 from shapely import Polygon
 from shapely.wkt import loads
@@ -216,17 +216,13 @@ class BoffetArea(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT_BUILDINGS, context)
-        gdf = qgis_source_to_geodataframe(source)
-
-        # Compute the number of steps to display within the progress bar and
-        # get features from source
-        #total = 100.0 / source.featureCount() if source.featureCount() else 0
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
        
         # Retrieve the network parameter and transform it to a lsit of GeoDataFrame
         networks = self.parameterAsLayerList(parameters, self.INPUT_NETWORK_PART, context)
         gdf_list_networks = []
         for i in networks:
-            gdf_list_networks.append(qgis_source_to_geodataframe(i))
+            gdf_list_networks.append(gpd.GeoDataFrame.from_features(i.getFeatures()))
         
         # Retrieve other parameter values
         activate_network_part = self.parameterAsBoolean(parameters, self.NETWORK_PARTITIONING_TF, context)
@@ -238,8 +234,7 @@ class BoffetArea(QgsProcessingAlgorithm):
         # Transform the result to QgsFeature()
         if len(gdf_list_networks) == 0 or activate_network_part == False:
             boffet = boffet_areas(gdf.geometry,buffer = buffer, erosion = erosion, simplification_distance = simpl_dist)
-            
-            boffet_gdf = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(boffet))
+            boffet_gdf = gpd.GeoDataFrame(geometry=gpd.GeoSeries(boffet))
             res = boffet_gdf.to_dict('records')
             res = list_to_qgis_feature(res)
 
@@ -255,10 +250,10 @@ class BoffetArea(QgsProcessingAlgorithm):
                     except: 
                         generalized = gdf.geometry
                     
-                    list_gdf.append(geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(generalized)))
+                    list_gdf.append(gpd.GeoDataFrame(geometry=gpd.GeoSeries(generalized)))
             
                 combined_gdf = pandas.concat(list_gdf, ignore_index=True)
-                combined_gdf = geopandas.GeoDataFrame(combined_gdf, geometry='geometry')  
+                combined_gdf = gpd.GeoDataFrame(combined_gdf, geometry='geometry')  
                 res = combined_gdf.to_dict('records')
                 res = list_to_qgis_feature(res)  
 

@@ -36,14 +36,13 @@ from qgis.core import (
 )
 from qgis.PyQt.QtWidgets import QMessageBox
 
-from cartagen.utils.partitioning import *
 from cartagen.enrichment.network import is_roundabout
 from cartagen import collapse_roundabouts
 
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4qgis.src.tools import *
+from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
 
-import geopandas
+import geopandas as gpd
 from shapely import Polygon
 from shapely.wkt import loads
 
@@ -146,7 +145,7 @@ class DetectRoundaboutsQGIS(QgsProcessingAlgorithm):
         source = self.parameterAsSource(parameters, self.INPUT, context)
 
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
-        gdf = qgis_source_to_geodataframe(source)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
         records = gdf.to_dict('records')
         count = len(records)
         feedback.setProgress(1) # set the loading bar to 1 %
@@ -379,48 +378,39 @@ class CollapseRoundaboutsQGIS(QgsProcessingAlgorithm):
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT_ROAD, context)
 
-        # Convert the source to GeoDataFrame, get the list of records and the number of entities
-        gdf = qgis_source_to_geodataframe(source)
-        records = gdf.to_dict('records')
-        count = len(records)
-
         # Define the output sink
         (sink, dest_id) = self.parameterAsSink(
             parameters, self.OUTPUT, context,
-            fields=source.fields(),
-            geometryType=QgsWkbTypes.LineString,
-            crs=source.sourceCrs()
+            fields = source.fields(),
+            geometryType = QgsWkbTypes.LineString,
+            crs = source.sourceCrs()
         )
 
-        # Compute the number of steps to display within the progress bar and
-        total = 100.0 / count if count > 0 else 0
+        # Convert the source to GeoDataFrame, get the list of records and the number of entities
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
         
         # Retrieve parameters
         maximum_diameter = self.parameterAsDouble(parameters, self.MAXIMUM_DIAMETER, context)
         rb = self.parameterAsSource(parameters, self.INPUT_ROUNDABOUTS, context)
-        rb = qgis_source_to_geodataframe(rb)
+        rb = gpd.GeoDataFrame.from_features(rb.getFeatures())
 
         # Use the CartAGen algorithm with the right parameter accordingto the inputs
         if self.parameterAsSource(parameters, self.INPUT_CROSSROADS, context):
             cr = self.parameterAsSource(parameters, self.INPUT_CROSSROADS, context)
-            cr = qgis_source_to_geodataframe(cr)
+            cr = gpd.GeoDataFrame.from_features(cr.getFeatures())
             cllpsed = collapse_roundabouts(gdf,rb,cr,maximum_diameter)
-        
         else:
             cllpsed = collapse_roundabouts(gdf,rb,maximum_diameter= maximum_diameter)
         
         # convert the resultto a list of dictionnaries
         cllpsed = cllpsed.to_dict('records')
-
         # Converts the list of dicts to a list of qgis features
-        result = list_to_qgis_feature_2(cllpsed,source.fields())
+        result = list_to_qgis_feature_2(cllpsed, source.fields())
 
         # Add features to the sink
         sink.addFeatures(result, QgsFeatureSink.FastInsert)
         
-        return {
-            self.OUTPUT: dest_id
-        }
+        return { self.OUTPUT: dest_id }
 
     def name(self):
         """

@@ -37,11 +37,11 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas
+import geopandas as gpd
 import pandas
 from cartagen4qgis import PLUGIN_ICON
 from cartagen import heatmap
-from cartagen4qgis.src.tools import *
+from cartagen4qgis.src.tools import list_to_qgis_feature
 
 from shapely import Polygon
 from shapely.wkt import loads
@@ -225,18 +225,12 @@ class VectorHeatmap(QgsProcessingAlgorithm):
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
 
-        #transform the source into a GeoDataFrame
-        points = qgis_source_to_geodataframe(source)
-
-        #retrieve the cliping layer (if provided) and transform it into list of QgsFeature()
-        clip_layer = self.parameterAsSource(parameters, self.CLIP, context)
-        clip = qgis_source_to_geodataframe(clip_layer)
-        clip = clip.to_dict('records')
-        clip = list_to_qgis_feature(clip)
+        # transform the source into a GeoDataFrame
+        points = gpd.GeoDataFrame.from_features(source.getFeatures())
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        #total = 100.0 / source.featureCount() if source.featureCount() else 0
+        # total = 100.0 / source.featureCount() if source.featureCount() else 0
         
         # Retrieve the other parameters
         cell_size = self.parameterAsInt(parameters, self.CELL_SIZE, context)
@@ -245,7 +239,6 @@ class VectorHeatmap(QgsProcessingAlgorithm):
         method = self.parameterAsString(parameters, self.METHOD, context)
         field = self.parameterAsString(parameters, self.FIELD, context)
 
-        
         if not field:
             field = None
 
@@ -259,25 +252,33 @@ class VectorHeatmap(QgsProcessingAlgorithm):
         #transform the result into a dictionnary, and the dictionnary into a list of QgsFeateur()
         res = res.to_dict('records')
         res = list_to_qgis_feature(res)
-        
-        #clip the heatmap with the cliping layer using the .intersection() method from QGIS
-        polygons_cliped = []
 
-        for feature1 in res:
-            geom1 = feature1.geometry()
-    
-            for feature2 in clip:
-                geom2 = feature2.geometry()
+        # retrieve the cliping layer (if provided) and transform it into list of QgsFeature()
+        clip_layer = self.parameterAsSource(parameters, self.CLIP, context)
+
+        if clip_layer is not None:
+            clip = gpd.GeoDataFrame.from_features(clip_layer.getFeatures())
+            clip = clip.to_dict('records')
+            clip = list_to_qgis_feature(clip)
         
-                intersection = geom1.intersection(geom2)
+            #clip the heatmap with the cliping layer using the .intersection() method from QGIS
+            polygons_cliped = []
+
+            for feature1 in res:
+                geom1 = feature1.geometry()
         
+                for feature2 in clip:
+                    geom2 = feature2.geometry()
+                    intersection = geom1.intersection(geom2)
+
+                if not intersection.isEmpty():
+                    new_feature = QgsFeature()
+                    new_feature.setGeometry(intersection)
+                    new_feature.setAttributes(feature1.attributes())
+                    polygons_cliped.append(new_feature)
         
-            if not intersection.isEmpty():
-           
-                new_feature = QgsFeature()
-                new_feature.setGeometry(intersection)
-                new_feature.setAttributes(feature1.attributes())
-                polygons_cliped.append(new_feature)
+        else:
+            polygons_cliped = res
 
         # declare the ouptput sink
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,

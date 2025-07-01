@@ -40,9 +40,9 @@ from qgis.PyQt.QtCore import QVariant
 from cartagen.enrichment.network import strokes_roads
 
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4qgis.src.tools import *
+from cartagen4qgis.src.tools import list_to_qgis_feature
 
-import geopandas
+import geopandas as gpd
 from shapely import Polygon
 from shapely.wkt import loads
 
@@ -130,14 +130,9 @@ class BuildStrokes(QgsProcessingAlgorithm):
         source = self.parameterAsSource(parameters, self.INPUT, context)
 
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
-        gdf = qgis_source_to_geodataframe(source)
-        records = gdf.to_dict('records')
-        count = len(records)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
 
         feedback.setProgress(1) # set the loading bar to 1 %
-    
-        # Compute the number of steps to display within the progress bar and
-        # total = 100.0 / count if count > 0 else 0
         
         # Retrieve parameters
         deviat_angle = self.parameterAsDouble(parameters, self.DEVIAT_ANGLE, context)

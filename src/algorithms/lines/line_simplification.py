@@ -22,20 +22,28 @@ __copyright__ = '(C) 2023 by Guillaume Touya, Justin Berli & Paul Bourcier'
 __revision__ = '$Format:%H$'
 
 from qgis.PyQt.QtCore import QCoreApplication
-from qgis.core import (QgsProcessing,
-		      QgsFeatureSink, 
-		      QgsProcessingAlgorithm,
-		      QgsFeature,
-		      QgsGeometry,
-		      QgsProcessingParameterFeatureSource, 
-		      QgsProcessingParameterFeatureSink, 
-		      QgsProcessingParameterNumber, 
-		      QgsProcessingParameterBoolean,
-		      QgsProcessingException)
+from qgis.core import (
+    QgsProcessing,
+    QgsFeatureSink, 
+    QgsProcessingAlgorithm,
+    QgsFeature,
+    QgsGeometry,
+    QgsProcessingParameterDefinition,
+    QgsProcessingParameterFeatureSource, 
+    QgsProcessingParameterFeatureSink, 
+    QgsProcessingParameterNumber,
+    QgsProcessingParameterDistance,
+    QgsProcessingParameterBoolean,
+    QgsProcessingException,
+    QgsProcessingParameterMultipleLayers
+)
 
+import geopandas as gpd
 from cartagen4qgis import PLUGIN_ICON
-from cartagen import visvalingam_whyatt, raposo
+from cartagen import visvalingam_whyatt, raposo, douglas_peucker
 from shapely.wkt import loads
+
+from cartagen4qgis.src.tools import qgis_source_to_geodataframe, list_to_qgis_feature_2
 
 class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
     """
@@ -81,7 +89,7 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
-                self.tr('Simplified')
+                self.tr('Simplified Visvalingam-Whyatt')
             )
         )
 
@@ -262,7 +270,7 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
-                self.tr('Simplified')
+                self.tr('Simplified Raposo')
             )
         )
 
@@ -373,3 +381,173 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
 
     def createInstance(self):
         return RaposoSimplificationQGIS()
+
+class DouglasPeucker(QgsProcessingAlgorithm):
+    """
+    Distance-based line simplification.
+
+    This algorithm was proposed by Ramer and by Douglas and Peucker. 
+    It is a line filtering algorithm, which means that it filters the vertices of the line (or polygon)
+    to only retain the most important ones to preserve the shape of the line. 
+    The algorithm iteratively searches the most characteristics vertices of portions of the line and decides
+    to retain or remove them given a distance threshold.
+
+    The algorithm tends to unsmooth geographic lines, and is rarely used to simplify geographic features. 
+    But it can be very useful to quickly filter the vertices of a line inside another algorithm.
+
+    This is a simple wrapper around shapely.simplify().
+
+    Parameters:
+
+    line (LineString) – The line to simplify.
+
+    threshold (float) – The distance threshold to remove the vertex from the line.
+
+    preserve_topology (bool, optional) – If set to True, the algorithm will prevent invalid geometries from being created 
+    (checking for collapses, ring-intersections, etc). The trade-off is computational expensivity.
+    """
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    OUTPUT = 'OUTPUT'
+    
+    INPUT = 'INPUT'
+
+    THRESHOLD = 'THRESHOLD'
+    PRESERVE_TOPOLOGY = 'PRESERVE_TOPOLOGY'
+ 
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Douglas-Peucker simplification'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr(self.name())
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr(self.groupId())
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Lines'
+
+    def icon(self):
+        """
+        Should return a QIcon which is used for your provider inside
+        the Processing toolbox.
+        """
+        return PLUGIN_ICON
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        return self.tr("Distance-based line simplification.\nThis algorithm was proposed by Ramer and by Douglas and Peucker. It is a line filtering algorithm, which means that it filters the vertices of the line (or polygon) to only retain the most important ones to preserve the shape of the line. The algorithm iteratively searches the most characteristics vertices of portions of the line and decides to retain or remove them given a distance threshold.\nThe algorithm tends to unsmooth geographic lines, and is rarely used to simplify geographic features. But it can be very useful to quickly filter the vertices of a line inside another algorithm.\nThis is a simple wrapper around shapely.simplify().\nThreshold : the distance thresholdto remove the vertex from the line.\nPreserve topology : if set to True, the algorithm will prevent invalid geometries from being created (checking for collapses, ring-intersections, etc). The trade-off is computational expensivity.")
+        
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return DouglasPeucker()
+
+    def initAlgorithm(self, config):
+        """
+        Here we define the inputs and output of the algorithm, along
+        with some other properties.
+        """
+
+        # We add the input vector features source.
+        self.addParameter(
+            QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                self.tr('Input lines or polygons'),
+                [QgsProcessing.TypeVectorPolygon, QgsProcessing.TypeVectorLine]
+            )
+        )
+
+        threshold = QgsProcessingParameterNumber(
+            self.THRESHOLD,
+            self.tr('Distance threshold to remove the vertex from the line'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=10.0,
+            optional=False
+        )
+        self.addParameter(threshold)
+       
+        preserve_topology = QgsProcessingParameterBoolean(
+            self.PRESERVE_TOPOLOGY,
+                self.tr('Preserve topology'),
+                optional=False,
+                defaultValue=True
+            )
+        self.addParameter(preserve_topology)
+
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Simplified Douglas-Peucker')
+            )
+        )
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """
+
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
+        
+        # Retrieve the other parameter values 
+        threshold = self.parameterAsDouble(parameters, self.THRESHOLD, context)
+        preserve_topology = self.parameterAsBoolean(parameters, self.PRESERVE_TOPOLOGY, context)
+
+        # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
+        dp = gdf.copy()
+        for i in range(len(gdf)):
+            dp.loc[i,'geometry'] = douglas_peucker(list(gdf.geometry)[i],threshold=threshold, preserve_topology=preserve_topology)
+            res = dp.to_dict('records')
+            res = list_to_qgis_feature_2(res, source.fields())
+
+
+        # Create the output sink    
+        (sink, dest_id) = self.parameterAsSink(
+            parameters, self.OUTPUT, context,
+            res[0].fields(), source.wkbType(), source.sourceCrs()
+        )
+        
+        # Add a feature in the sink
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+
+        return {
+            self.OUTPUT: dest_id
+        }

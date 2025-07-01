@@ -1,2 +1,0 @@
-from cartagen.processes.agent.constraints.micro_constraints import BuildingGranularityConstraint, BuildingSizeConstraint, BuildingSquarenessConstraint
-from cartagen.processes.agent.constraints.meso_constraints import ComponentsSatisfactionConstraint, BlockDensityConstraint, BlockProximityConstraint

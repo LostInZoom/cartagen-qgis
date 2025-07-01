@@ -1,29 +1,27 @@
 import geopandas as gpd
 from shapely.wkt import loads
 from qgis.core import QgsFeature, QgsGeometry, QgsField, QgsFields
-from qgis.PyQt.QtCore import QVariant,QDateTime, QDate
+from qgis.PyQt.QtCore import QVariant, QDateTime, QDate
 
 def qgis_source_to_geodataframe(source):
     """
     Converts a QGIS source to a geopandas GeoDataFrame.
-    """
-    crs = source.sourceCrs().authid()
-
+    THIS CAUSES ISSUES WITH QGIS 
+    """    
     features = source.getFeatures()
     f = []
     for feature in features:
-      
-        try:
-            entity = feature.__geo_interface__["properties"]
-            entity['geometry'] = loads(feature.geometry().asWkt())
-            f.append(entity)
-        except NameError:
-            pass
-    if len(f) > 0: 
-        gdf = gpd.GeoDataFrame(f, crs=crs)
+        entity = { 'geometry': loads(feature.geometry().asWkt()) }
+        fields = feature.fields()
+        for field in fields:
+            name = field.name()
+            entity[name] = feature.attribute(name)
+        f.append(entity)
+
+    if len(f) > 0:
+        return gpd.GeoDataFrame(f, crs=source.sourceCrs().authid())
     else:
-        gdf = gpd.GeoDataFrame(columns=['geometry'], geometry='geometry')
-    return gdf
+        return None
 
 def list_to_qgis_feature(dicts):
     """

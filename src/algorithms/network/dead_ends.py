@@ -45,13 +45,14 @@ from qgis.core import (
     QgsProcessingParameterDistance,
 )
 
+import geopandas as gpd
+
 from cartagen.enrichment import detect_dead_ends
 from cartagen import eliminate_dead_ends
 
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4qgis.src.tools import *
+from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
 
-import geopandas
 
 class DetectDeadEnds(QgsProcessingAlgorithm):
     """
@@ -178,12 +179,7 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
         source = self.parameterAsSource(parameters, self.INPUT, context)
         
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
-        gdf = qgis_source_to_geodataframe(source)
-        records = gdf.to_dict('records')
-        count = len(records)
-
-        # Compute the number of steps to display within the progress bar and
-        total = 100.0 / count if count > 0 else 0
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
         
         # Retrieve parameters
         o_faces = self.parameterAsBoolean(parameters, self.OUTSIDE_FACES, context)
@@ -387,12 +383,7 @@ class EliminateDeadEnds(QgsProcessingAlgorithm):
         source = self.parameterAsSource(parameters, self.INPUT, context)
  	
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
-        gdf = qgis_source_to_geodataframe(source)
-        records = gdf.to_dict('records')
-        count = len(records)
-
-        # Compute the number of steps to display within the progress bar and
-        # total = 100.0 / count if count > 0 else 0
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
         
         # Retrieve parameters
         k_longest = self.parameterAsBoolean(parameters, self.KEEP_LONGEST, context)

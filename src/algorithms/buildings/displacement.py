@@ -35,10 +35,9 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas
+import geopandas as gpd
 from cartagen4qgis import PLUGIN_ICON
 from cartagen import random_displacement, partition_networks
-from cartagen4qgis.src.tools import *
 
 from shapely import Polygon
 from shapely.wkt import loads
@@ -197,7 +196,7 @@ class BuildingDisplacementRandomQGIS(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT_BUILDINGS, context)
-        gdf = qgis_source_to_geodataframe(source)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
@@ -208,7 +207,7 @@ class BuildingDisplacementRandomQGIS(QgsProcessingAlgorithm):
         networks = self.parameterAsLayerList(parameters, self.INPUT_NETWORK_PART, context)
         gdf_list_networks = []
         for i in networks:
-            gdf_list_networks.append(qgis_source_to_geodataframe(i))
+            gdf_list_networks.append(gpd.GeoDataFrame.from_features(i.getFeatures()))
 
         # Retrieve the other parameter values 
         max_displ = self.parameterAsDouble(parameters, self.MAX_DISPLACEMENT, context)
@@ -220,15 +219,18 @@ class BuildingDisplacementRandomQGIS(QgsProcessingAlgorithm):
 
         # Use the CartAGen algorithm with or without network partitionning
         if len(network_part) == 0 or activate_network_part == False:
-            d = random_displacement(polygons=gdf, networks=gdf_list_networks, polygon_distance=poly_dist, 
-                                             network_distance=network_dist, max_trials=maxtrials, max_displacement=max_displ)
+            d = random_displacement(
+                polygons=gdf, networks=gdf_list_networks, polygon_distance=poly_dist, 
+                network_distance=network_dist, max_trials=maxtrials, max_displacement=max_displ
+            )
         
         else:
             
-            network_part_gdf = qgis_source_to_geodataframe(network_part[0])
-        
-            d = random_displacement(polygons=gdf, networks=gdf_list_networks, polygon_distance=poly_dist, 
-                                             network_distance=network_dist, max_trials=maxtrials, max_displacement=max_displ, network_partitioning=[network_part_gdf])
+            network_part_gdf = gpd.GeoDataFrame.from_features(network_part[0])
+            d = random_displacement(
+                polygons=gdf, networks=gdf_list_networks, polygon_distance=poly_dist, 
+                network_distance=network_dist, max_trials=maxtrials, max_displacement=max_displ, network_partitioning=[network_part_gdf]
+            )
         
         # Convert the result to a list of dictionnaries
         d = d.to_dict('records')

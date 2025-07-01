@@ -35,11 +35,11 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas
+import geopandas as gpd
 import pandas
 from cartagen4qgis import PLUGIN_ICON
 from cartagen import gaussian_smoothing
-from cartagen4qgis.src.tools import *
+from cartagen4qgis.src.tools import list_to_qgis_feature_2
 
 from shapely import Polygon
 from shapely.wkt import loads
@@ -60,7 +60,7 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
         densify (bool, optional) – Whether the resulting line should keep the new node density. Default to True.
     """
 
-     # Constants used to refer to parameters and outputs. They will be
+    # Constants used to refer to parameters and outputs. They will be
     # used when calling the algorithm from another algorithm, or when
     # calling from the QGIS console.
 
@@ -189,7 +189,7 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
-        gdf = qgis_source_to_geodataframe(source)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
         
         # Compute the number of steps to display within the progress bar and
         # get features from source

@@ -34,20 +34,18 @@ from qgis.core import (
     QgsProcessingParameterNumber,
     QgsProcessingParameterDistance,
 )
-
 from qgis.PyQt.QtCore import QVariant, QDateTime
-
 from qgis.PyQt.QtWidgets import QMessageBox
+
+import math
+import geopandas as gpd
+from shapely import Polygon
+from shapely.wkt import loads
 
 from cartagen import detect_branching_crossroads, collapse_branching_crossroads
 
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4qgis.src.tools import *
-
-import math
-import geopandas
-from shapely import Polygon
-from shapely.wkt import loads
+from cartagen4qgis.src.tools import list_to_qgis_feature
 
 class DetectBranchingCrossroads(QgsProcessingAlgorithm):
     """
@@ -267,7 +265,7 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
         source = self.parameterAsSource(parameters, self.INPUT_ROAD, context)
 
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
-        gdf = qgis_source_to_geodataframe(source)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
         records = gdf.to_dict('records')
         count = len(records)
 
@@ -284,14 +282,19 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
 
         #Perform the CartAGen algorithm with or without the roundabount input
         if rb:
-            rb = qgis_source_to_geodataframe(rb)
-          
-            br = detect_branching_crossroads(gdf, roundabouts= rb, area_threshold = area_thrshld, maximum_distance_area = max_dist_area, 
-                                              allow_middle_node = allow_mid_node, middle_angle_tolerance = mid_angle_tolerance, allow_single_4degree_node = allow_4degree)
+            rb = gpd.GeoDataFrame.from_features(rb.getFeatures())
+            br = detect_branching_crossroads(
+                gdf, roundabouts= rb, area_threshold = area_thrshld,
+                maximum_distance_area = max_dist_area, allow_middle_node = allow_mid_node,
+                middle_angle_tolerance = mid_angle_tolerance, allow_single_4degree_node = allow_4degree
+            )
             
         else:
-            br = detect_branching_crossroads(gdf, area_threshold = area_thrshld, maximum_distance_area = max_dist_area, 
-                                              allow_middle_node = allow_mid_node, middle_angle_tolerance = mid_angle_tolerance, allow_single_4degree_node = allow_4degree)
+            br = detect_branching_crossroads(
+                gdf, area_threshold = area_thrshld, maximum_distance_area = max_dist_area, 
+                allow_middle_node = allow_mid_node, middle_angle_tolerance = mid_angle_tolerance,
+                allow_single_4degree_node = allow_4degree
+            )
        
         #converte the result to a list of dictionnaries
         br = br.to_dict('records')
@@ -498,16 +501,11 @@ class CollapseBranchingCrossroads(QgsProcessingAlgorithm):
         source = self.parameterAsSource(parameters, self.INPUT_ROAD, context)
 
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
-        gdf = qgis_source_to_geodataframe(source)
-        records = gdf.to_dict('records')
-        count = len(records)
-
-         # Compute the number of steps to display within the progress bar and
-         #total = 100.0 / count if count > 0 else 0
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
         
         # retrieve the branching crossroads layerand converts it to gdf
         bc = self.parameterAsSource(parameters, self.INPUT_BRANCHING_CROSSROADS, context)
-        bc = qgis_source_to_geodataframe(bc)
+        bc = gpd.GeoDataFrame.from_features(bc.getFeatures())
 
         # retrieve max_area parameter value
         max_area = self.parameterAsDouble(parameters, self.MAXIMUM_AREA, context)
@@ -518,7 +516,6 @@ class CollapseBranchingCrossroads(QgsProcessingAlgorithm):
         #try to convert the result to a list of dicts. If not possible, convert the initial road network instead
         try:
             cllpsed = cllpsed.to_dict('records')
-            
         except AttributeError:
             cllpsed = gdf.to_dict('records')
            
@@ -527,11 +524,11 @@ class CollapseBranchingCrossroads(QgsProcessingAlgorithm):
 
         # Create the ouptput sink
         (sink, dest_id) = self.parameterAsSink(
-                parameters, self.OUTPUT, context,
-                fields=res[0].fields(),
-                geometryType=QgsWkbTypes.LineString,
-                crs=source.sourceCrs()
-            )  
+            parameters, self.OUTPUT, context,
+            fields=res[0].fields(),
+            geometryType=QgsWkbTypes.LineString,
+            crs=source.sourceCrs()
+        )
 
         # Add features to the output sink
         sink.addFeatures(res, QgsFeatureSink.FastInsert)       

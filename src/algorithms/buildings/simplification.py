@@ -99,7 +99,7 @@ class BuildingSimplificationRuasQGIS(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
-                self.tr('Simplified')
+                self.tr('Simplified Buildings')
             )
         )
 

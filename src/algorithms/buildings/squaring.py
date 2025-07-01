@@ -168,7 +168,7 @@ class SquaringQGIS(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
-                self.tr('Squared')
+                self.tr('Squared Buildings')
             )
         )
 
@@ -202,13 +202,6 @@ class SquaringQGIS(QgsProcessingAlgorithm):
         wflat = self.parameterAsInt(parameters, self.WEIGHT_FLAT, context)
         whright = self.parameterAsInt(parameters, self.WEIGHT_HALF_RIGHT, context)
 
-        # Use the Cartagen algorithm
-        sq = Squarer(
-            max_iteration=maxiter, norm_tolerance=normtol,
-            right_tolerance=rtol, flat_tolerance=ftol, half_right_tolerance=hrtol,
-            fixed_weight=wfixed, right_weight=wright, flat_weight=wflat, half_right_weight=whright
-        )
-
         buildings = []
         attributes = []
         for current, feature in enumerate(features):
@@ -220,14 +213,18 @@ class SquaringQGIS(QgsProcessingAlgorithm):
             wkt = feature.geometry().asWkt()
             shapely_geom = loads(wkt)
 
-            buildings.append(shapely_geom)
+            squared = square_polygon_ls(
+                shapely_geom,
+                max_iteration=maxiter, norm_tolerance=normtol,
+                right_tolerance=rtol, flat_tolerance=ftol,
+                fixed_weight=wfixed, right_weight=wright, flat_weight=wflat
+            )
+
+            buildings.append(squared)
             # Update the progress bar
             feedback.setProgress(int(current * total))
 
-        points = sq.square(buildings)
-        simplified = sq.get_shapes_from_new_points(buildings, points)
-
-        for i, simple in enumerate(simplified):
+        for i, simple in enumerate(buildings):
             result = QgsFeature()
             result.setGeometry(QgsGeometry.fromWkt(Polygon(simple).wkt))
             result.setAttributes(attributes[i])

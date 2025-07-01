@@ -35,11 +35,11 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas
+import geopandas as gpd
 import pandas
 from cartagen4qgis import PLUGIN_ICON
 from cartagen import morphological_amalgamation, partition_networks
-from cartagen4qgis.src.tools import *
+from cartagen4qgis.src.tools import list_to_qgis_feature
 
 from shapely import Polygon
 from shapely.wkt import loads
@@ -202,7 +202,7 @@ class MorphologicalAmalgamation(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT_BUILDINGS, context)
-        gdf = qgis_source_to_geodataframe(source)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
@@ -212,7 +212,7 @@ class MorphologicalAmalgamation(QgsProcessingAlgorithm):
         networks = self.parameterAsLayerList(parameters, self.INPUT_NETWORK_PART, context)
         gdf_list_networks = []
         for i in networks:
-            gdf_list_networks.append(qgis_source_to_geodataframe(i))
+            gdf_list_networks.append(gpd.GeoDataFrame.from_features(i.getFeatures()))
         
         # Retrieve the other parameter values 
         activate_network_part = self.parameterAsBoolean(parameters, self.NETWORK_PARTITIONING_TF, context)
@@ -224,12 +224,8 @@ class MorphologicalAmalgamation(QgsProcessingAlgorithm):
         # Convert the result to a list of QgsFeature()
         if len(network_part) == 0 or activate_network_part == False:
             amal = morphological_amalgamation(list(gdf.geometry),buffer = buffer, edge_length = edge_length)
-            
-            amal_gdf = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(amal))
-            res = amal_gdf.to_dict('records')
-            res = list_to_qgis_feature(res)
-     
-
+            amal_gdf = gpd.GeoDataFrame(geometry=gpd.GeoSeries(amal))
+            res = amal_gdf.to_dict('records')     
         else:
             part = partition_networks(gdf,gdf_list_networks[0])
             list_gdf = []
@@ -242,11 +238,15 @@ class MorphologicalAmalgamation(QgsProcessingAlgorithm):
                 except: 
                     generalized = gdf.geometry
             
-                list_gdf.append(geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(generalized)))
+                list_gdf.append(gpd.GeoDataFrame(geometry=gpd.GeoSeries(generalized)))
             combined_gdf = pandas.concat(list_gdf, ignore_index=True)
-            combined_gdf = geopandas.GeoDataFrame(combined_gdf, geometry='geometry')  
+            combined_gdf = gpd.GeoDataFrame(combined_gdf, geometry='geometry')  
             res = combined_gdf.to_dict('records')
-            res = list_to_qgis_feature(res)  
+
+        if len(res) > 0:
+            res = list_to_qgis_feature(res)
+        else:
+            res = []
 
         
         # Create the output sink

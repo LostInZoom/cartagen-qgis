@@ -1,5 +1,5 @@
-from .branching_crossroads import *
-from .dual_carriageways import *
-from .roundabouts import *
-from .dead_ends import *
-from .Stroke_network import *
+from .branching_crossroads import DetectBranchingCrossroads, CollapseBranchingCrossroads
+from .dual_carriageways import DetectDualCarriageways, CollapseDualCarriageways
+from .roundabouts import DetectRoundaboutsQGIS, CollapseRoundaboutsQGIS
+from .dead_ends import DetectDeadEnds, EliminateDeadEnds
+from .stroke_network import BuildStrokes

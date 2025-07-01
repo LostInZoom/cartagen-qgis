@@ -52,9 +52,9 @@ from cartagen.enrichment import detect_dual_carriageways
 from cartagen import collapse_dual_carriageways
 
 from cartagen4qgis import PLUGIN_ICON
-from cartagen4qgis.src.tools import *
+from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
 
-import geopandas
+import geopandas as gpd
 
 class DetectDualCarriageways(QgsProcessingAlgorithm):
     """
@@ -284,12 +284,7 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
         source = self.parameterAsSource(parameters, self.INPUT, context)
       
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
-        gdf = qgis_source_to_geodataframe(source)
-        records = gdf.to_dict('records')
-        count = len(records)
-
-         # Compute the number of steps to display within the progress bar and
-        total = 100.0 / count if count > 0 else 0
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
         
         # Retrieve parameters
         importance = self.parameterAsString(parameters, self.IMPORTANCE, context)
@@ -308,8 +303,11 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
             value = None
 
         # Actual algorithm
-        dc = detect_dual_carriageways(gdf, importance = importance, value = value, concavity = concavity,
-        elongation = elongation, compactness = compactness, area = area, width = width, huber = huber)
+        dc = detect_dual_carriageways(
+            gdf, importance = importance, value = value, concavity = concavity,
+            elongation = elongation, compactness = compactness,
+            area = area, width = width, huber = huber
+        )
         
         # Convert the result to a list of dicts
         dc = dc.to_dict('records')
@@ -508,18 +506,11 @@ class CollapseDualCarriageways(QgsProcessingAlgorithm):
             )
         
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
-        gdf = qgis_source_to_geodataframe(source)
-        records = gdf.to_dict('records')
-        count = len(records)
-        
-        gdf = geopandas.GeoDataFrame(records)
-    
-         # Compute the number of steps to display within the progress bar and
-        total = 100.0 / count if count > 0 else 0
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
         
         #retrieve the carriageways layer and transform it to a gdf
         dc = self.parameterAsSource(parameters, self.INPUT_CARRIAGEWAYS, context)
-        dc = qgis_source_to_geodataframe(dc)
+        dc = gpd.GeoDataFrame.from_features(dc.getFeatures())
 
         #retrieve the sigma parameters and prevent it from being 0
         sigma = self.parameterAsDouble(parameters, self.SIGMA, context)
@@ -533,10 +524,9 @@ class CollapseDualCarriageways(QgsProcessingAlgorithm):
         cllpsed = collapse_dual_carriageways(gdf, dc, sigma=sigma, propagate_attributes=attr)
 
         # try to convert the result of the algorithm to a list of dicts
-        #if not possible, convert the initial gdf instead
+        # if not possible, convert the initial gdf instead
         try:
             cllpsed = cllpsed.to_dict('records')
-          
         except AttributeError:
             cllpsed = gdf.to_dict('records')
            

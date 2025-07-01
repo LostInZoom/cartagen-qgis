@@ -21,10 +21,11 @@ __copyright__ = '(C) 2023 by Guillaume Touya, Justin Berli & Paul Bourcier'
 
 __revision__ = '$Format:%H$'
 
-from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import QCoreApplication, QVariant
 from qgis.core import (
     QgsProcessing, QgsFeatureSink, QgsProcessingAlgorithm,
-    QgsFeature, QgsGeometry, QgsProcessingParameterDefinition, QgsWkbTypes
+    QgsFeature, QgsGeometry, QgsProcessingParameterDefinition, QgsWkbTypes,
+    QgsField, QgsFields
 )
 from qgis.core import (
     QgsProcessingParameterFeatureSource,
@@ -37,11 +38,15 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas
+import geopandas as gpd
 import pandas
 from cartagen4qgis import PLUGIN_ICON
-from cartagen import reduce_kmeans, reduce_labelgrid, reduce_quadtree
-from cartagen4qgis.src.tools import *
+from cartagen import (
+    kmeans_selection, kmeans_simplification, kmeans_aggregation,
+    labelgrid_selection, labelgrid_simplification, labelgrid_aggregation,
+    quadtree_selection, quadtree_simplification, quadtree_aggregation
+)
+from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
 
 from shapely import Polygon
 from shapely.wkt import loads
@@ -220,7 +225,7 @@ class ReduceKmeans(QgsProcessingAlgorithm):
         source = self.parameterAsSource(parameters, self.INPUT, context)
 
         # transform the source into gdf
-        points = qgis_source_to_geodataframe(source)
+        points = gpd.GeoDataFrame.from_features(source.getFeatures())
 
         ## Compute the number of steps to display within the progress bar and
         ## get features from source
@@ -236,31 +241,26 @@ class ReduceKmeans(QgsProcessingAlgorithm):
 
         # use the version of the CartAGen's algorithm according to selected mode
         if mode == "1":
-            res = reduce_kmeans(points, ratio = ratio, mode = modes[1])
-            fields = source.fields()
+            res = kmeans_simplification(points, ratio)
         elif mode == "0":
-            res = reduce_kmeans(points, ratio = ratio, mode = modes[0], column=field)
-            fields = source.fields()
+            res = kmeans_selection(points, ratio, field)
         else:
             if field:
-                res = reduce_kmeans(points, ratio = ratio, mode = modes[2], column=field)
-                fields = QgsFields()
-                fields.append(QgsField("total", QVariant.Double))
-                fields.append(QgsField("count",  QVariant.Int))
+                res = kmeans_aggregation(points, ratio, field)
             else:
-                res = reduce_kmeans(points, ratio = ratio, mode = modes[2])
-                fields = QgsFields()
-                fields.append(QgsField("count",  QVariant.Int))
+                res = kmeans_aggregation(points, ratio)
         
         feedback.setProgress(90) #start the loading bar at 90 %
 
         #transform the output into a dictionnary, and the dictionnary into a list of QgsFeature()
         res = res.to_dict('records')
-        res = list_to_qgis_feature_2(res,fields)
+        res = list_to_qgis_feature(res)
      
         # declare the sink
-        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
-                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        (sink, dest_id) = self.parameterAsSink(
+            parameters, self.OUTPUT,
+            context, res[0].fields(), source.wkbType(), source.sourceCrs()
+        )
         
         # Add a feature in the sink
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
@@ -467,7 +467,7 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
         #transform the source into GeoDataFrame
-        points = qgis_source_to_geodataframe(source)
+        points = gpd.GeoDataFrame.from_features(source.getFeatures())
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
@@ -485,20 +485,20 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
         feedback.setProgress(1) #set the loading bar to 1%
         #Use the right version of the CartAGen algorithm, depending on the inputs values
         if mode == "1":
-            res = reduce_labelgrid(points, width = width, height= height, shape=shapes[shape], mode = "simplification", grid=grid)
+            res = labelgrid_simplification(points, width = width, height= height, shape=shapes[shape], grid=grid)
             fields = source.fields()
             if grid == True:
                 res_2 = res[1]
                 res = res[0]
         elif mode == "0":
-            res = reduce_labelgrid(points, width = width, height= height, shape=shapes[shape], mode = "selection", column=field, grid=grid)
+            res = labelgrid_selection(points, width = width, height= height, shape=shapes[shape], column=field, grid=grid)
             fields = source.fields()
             if grid == True:
                 res_2 = res[1]
                 res = res[0]
         else:
             if field:
-                res = reduce_labelgrid(points, width = width, height= height, shape=shapes[shape], mode = "aggregation", column=field, grid=grid)
+                res = labelgrid_aggregation(points, width = width, height= height, shape=shapes[shape], column=field, grid=grid)
                 fields = QgsFields()
                 fields.append(QgsField("sum", QVariant.Double))
                 fields.append(QgsField("count",  QVariant.Int))
@@ -506,7 +506,7 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
                     res_2 = res[1]
                     res = res[0]
             else:
-                res = reduce_labelgrid(points, width = width, height= height, shape=shapes[shape], mode = "aggregation", grid=grid)
+                res = labelgrid_aggregation(points, width = width, height= height, shape=shapes[shape], grid=grid)
                 fields = QgsFields()
                 fields.append(QgsField("count",  QVariant.Int))
                 if grid == True:
@@ -517,7 +517,7 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
 
         #transform the result into a dictionnary, and the dictionnary into a list of QgsFeature()
         res = res.to_dict('records')
-        res = list_to_qgis_feature_2(res,fields)
+        res = list_to_qgis_feature(res)
      
         # Declare the ouptut sink   
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
@@ -531,8 +531,12 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
             res_2 = res_2.to_dict('records')
             res_2 = list_to_qgis_feature(res_2)
         
-            (sink_2, dest_id) = self.parameterAsSink(parameters, self.OUTPUT_2,
-                context, res_2[0].fields(), QgsWkbTypes.Polygon, source.sourceCrs())
+            (sink_2, dest_id) = self.parameterAsSink(
+                parameters, self.OUTPUT_2,
+                context, res_2[0].fields(),
+                QgsWkbTypes.Polygon, source.sourceCrs()
+            )
+            
             sink_2.addFeatures(res_2, QgsFeatureSink.FastInsert)
 
         feedback.setProgress(100) #set the loading bar to 100%
@@ -713,9 +717,8 @@ class ReduceQuadtree(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
-        points = qgis_source_to_geodataframe(source) #transform the source into GeoDataFrame
+        points = gpd.GeoDataFrame.from_features(source.getFeatures())
     
-      
         # Compute the number of steps to display within the progress bar and
         # get features from source
         # total = 100.0 / source.featureCount() if source.featureCount() else 0
@@ -730,43 +733,46 @@ class ReduceQuadtree(QgsProcessingAlgorithm):
         
         # perform the right version of the CartAGen algorithm according to the parameters
         if mode == "1":
-            res = reduce_quadtree(points, depth= depth, mode = 'simplification', quadtree=qtree)
+            res = quadtree_simplification(points, depth= depth, quadtree=qtree)
             fields = source.fields()
             if qtree == True:
-                res_2 = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res[1].geometry()))
+                res_2 = gpd.GeoDataFrame(geometry=gpd.GeoSeries(res[1].geometry()))
                 res = res[0]
         elif mode == "0":
-            res = reduce_quadtree(points, depth= depth, mode = 'selection', column=field, quadtree=qtree)
+            res = quadtree_selection(points, depth= depth,  column=field, quadtree=qtree)
             fields = source.fields()
             if qtree == True:
-                res_2 = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res[1].geometry()))
+                res_2 = gpd.GeoDataFrame(geometry=gpd.GeoSeries(res[1].geometry()))
                 res = res[0]
         else:
             if field:
-                res = reduce_quadtree(points, depth= depth, mode = 'aggregation', column=field, quadtree=qtree)
+                res = quadtree_aggregation(points, depth= depth, column=field, quadtree=qtree)
                 fields = QgsFields()
                 fields.append(QgsField("total", QVariant.Double))
                 fields.append(QgsField("count",  QVariant.Int))
                 if qtree == True:
-                    res_2 = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res[1].geometry()))
+                    res_2 = gpd.GeoDataFrame(geometry=gpd.GeoSeries(res[1].geometry()))
                     res = res[0]
             else:
-                res = reduce_quadtree(points, depth= depth, mode = 'aggregation', quadtree= qtree)
+                res = quadtree_aggregation(points, depth= depth, quadtree= qtree)
                 fields = QgsFields()
                 fields.append(QgsField("count",  QVariant.Int))
                 if qtree == True:
-                    res_2 = geopandas.GeoDataFrame(geometry=geopandas.GeoSeries(res[1].geometry()))
+                    res_2 = gpd.GeoDataFrame(geometry=gpd.GeoSeries(res[1].geometry()))
                     res = res[0]
 
         feedback.setProgress(90) #set the loading bar to 90 %
 
         #transform the result gdf in a into a dictionnary, and the dictionnary into a list of QgsFeature()
         res = res.to_dict('records')
-        res = list_to_qgis_feature_2(res,fields)
+        res = list_to_qgis_feature(res)
      
         # Define the output sink
-        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
-                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        (sink, dest_id) = self.parameterAsSink(
+            parameters, self.OUTPUT,
+            context, res[0].fields(),
+            source.wkbType(), source.sourceCrs()
+        )
         
         # if the qtree parameter is set to True, a second sink is added
         if qtree == True:

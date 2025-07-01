@@ -1,1 +1,1 @@
-from .partitioning import *
+from .partitioning import NetworkFacesQGIS
