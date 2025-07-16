@@ -25,7 +25,7 @@ from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
     QgsProcessing, QgsFeatureSink, QgsProcessingAlgorithm,
     QgsFeature, QgsGeometry, QgsProcessingParameterDefinition,
-    QgsWkbTypes, QgsVectorLayer, QgsField
+    QgsWkbTypes, QgsVectorLayer, QgsField, QgsFields
 )
 from qgis.core import (
     QgsProcessingParameterFeatureSource,
@@ -301,8 +301,7 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
             fields.append(QgsField("type",  QVariant.String))
 
             res = [QgsFeature(fields)]
-
-            QMessageBox.warning(None, "Warning", "No branching crossroads detected, output layer is empty.")
+            # QMessageBox.warning(None, "Warning", "No branching crossroads detected, output layer is empty.")
 
         else:
             res = list_to_qgis_feature(br.to_dict('records'))

@@ -25,7 +25,7 @@ from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
     QgsProcessing, QgsFeatureSink, QgsProcessingAlgorithm,
     QgsFeature, QgsGeometry, QgsProcessingParameterDefinition,
-    QgsWkbTypes, QgsVectorLayer, QgsField
+    QgsWkbTypes, QgsVectorLayer, QgsField, QgsFields
 )
 from qgis.core import (
     QgsProcessingParameterFeatureSource,

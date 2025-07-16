@@ -21,11 +21,11 @@ __copyright__ = '(C) 2023 by Guillaume Touya, Justin Berli & Paul Bourcier'
 
 __revision__ = '$Format:%H$'
 
-from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import QCoreApplication, QVariant
 from qgis.core import (
     QgsProcessing, QgsFeatureSink, QgsProcessingAlgorithm,
     QgsFeature, QgsGeometry, QgsProcessingParameterDefinition,
-    QgsWkbTypes, QgsVectorLayer
+    QgsWkbTypes, QgsVectorLayer, QgsField, QgsFields
 )
 from qgis.core import (
     QgsProcessingParameterFeatureSource,
@@ -184,10 +184,9 @@ class DetectRoundaboutsQGIS(QgsProcessingAlgorithm):
             fields = QgsFields()
             fields.append(QgsField("index", QVariant.Double))
             fields.append(QgsField("cid",  QVariant.Int))
-            
             res = [QgsFeature(fields)] #create a list of empty QgsFeature with the created fields
 
-            QMessageBox.warning(None, "Warning", "No roundabouts detected, output layer is empty.")
+            # QMessageBox.warning(None, "Warning", "No roundabouts detected, output layer is empty.")
 
         else:    
             #convert the result to a GeoDataFrame, and this gdf into a list of dicts and then a list of QgsFeature()
