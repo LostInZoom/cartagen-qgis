@@ -37,7 +37,7 @@ from qgis.core import (
 from qgis.PyQt.QtWidgets import QMessageBox
 
 from cartagen.enrichment.network import is_roundabout
-from cartagen import collapse_roundabouts
+from cartagen import collapse_roundabouts, network_faces
 
 from cartagen4qgis import PLUGIN_ICON
 from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
