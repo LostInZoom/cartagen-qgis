@@ -266,11 +266,6 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
 
         # Convert the source to GeoDataFrame, get the list of records and the number of entities
         gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
-        records = gdf.to_dict('records')
-        count = len(records)
-
-        # Compute the number of steps to display within the progress bar and
-        #total = 100.0 / count if count > 0 else 0
         
         # retrieve the other input
         rb = self.parameterAsSource(parameters, self.INPUT_ROUNDABOUT, context)
@@ -295,12 +290,9 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
                 allow_middle_node = allow_mid_node, middle_angle_tolerance = mid_angle_tolerance,
                 allow_single_4degree_node = allow_4degree
             )
-       
-        #converte the result to a list of dictionnaries
-        br = br.to_dict('records')
         
         # Manually create an empty QgsFeature() if there are no branching crossroads detected
-        if len(br) == 0:    
+        if br.shape[0] == 0:    
             fields = QgsFields()
             fields.append(QgsField("distance_area", QVariant.Double))
             fields.append(QgsField("cid",  QVariant.Int))
@@ -312,13 +304,8 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
 
             QMessageBox.warning(None, "Warning", "No branching crossroads detected, output layer is empty.")
 
-        else:   
-            #convert the result to a GeoDataFrame
-            gdf_final = gpd.GeoDataFrame(br, crs = source.sourceCrs().authid())
-            # and then to a list of dicts
-            res = gdf_final.to_dict('records')
-            # and finally to a list of QgsFeature()
-            res = list_to_qgis_feature(br)
+        else:
+            res = list_to_qgis_feature(br.to_dict('records'))
           
         #Create the output sink
         (sink, dest_id) = self.parameterAsSink(
