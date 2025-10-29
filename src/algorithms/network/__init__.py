@@ -3,3 +3,4 @@ from .dual_carriageways import DetectDualCarriageways, CollapseDualCarriageways
 from .roundabouts import DetectRoundaboutsQGIS, CollapseRoundaboutsQGIS
 from .dead_ends import DetectDeadEnds, EliminateDeadEnds
 from .stroke_network import BuildStrokes
+from .rural_traffic import RuralTraffic

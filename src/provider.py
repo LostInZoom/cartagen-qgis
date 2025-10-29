@@ -74,6 +74,7 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         self.addAlgorithm(DetectDualCarriageways())
         self.addAlgorithm(CollapseDualCarriageways())
         self.addAlgorithm(BuildStrokes())
+        self.addAlgorithm(RuralTraffic())
 
         # Tools
         self.addAlgorithm(NetworkFacesQGIS())
