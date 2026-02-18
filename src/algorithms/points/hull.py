@@ -37,15 +37,6 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas as gpd
-import pandas
-from cartagen4qgis import PLUGIN_ICON
-from cartagen import hull_delaunay, hull_swinging_arm
-from cartagen4qgis.src.tools import list_to_qgis_feature
-
-from shapely import Polygon
-from shapely.wkt import loads
-
 class HullDelaunay(QgsProcessingAlgorithm):
     """
     Create the hull of a set of points using the Delaunay triangulation.
@@ -116,7 +107,8 @@ class HullDelaunay(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def shortHelpString(self):
         """
@@ -169,7 +161,15 @@ class HullDelaunay(QgsProcessingAlgorithm):
     def processAlgorithm(self, parameters, context, feedback):
         """
         Here is where the processing itself takes place.
-        """ 
+        """
+        import geopandas as gpd
+        import pandas
+        from cartagen4qgis import get_plugin_icon
+        from cartagen import hull_delaunay, hull_swinging_arm
+        from cartagen4qgis.src.tools import list_to_qgis_feature
+        from shapely import Polygon
+        from shapely.wkt import loads
+
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
@@ -283,7 +283,8 @@ class HullSwingingArm(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def shortHelpString(self):
         """
@@ -348,6 +349,14 @@ class HullSwingingArm(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """ 
+        import geopandas as gpd
+        import pandas
+        from cartagen4qgis import get_plugin_icon
+        from cartagen import hull_delaunay, hull_swinging_arm
+        from cartagen4qgis.src.tools import list_to_qgis_feature
+        from shapely import Polygon
+        from shapely.wkt import loads
+        
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.

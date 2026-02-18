@@ -36,11 +36,6 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-from cartagen4qgis import PLUGIN_ICON
-from cartagen.utils import network_faces
-from shapely import Polygon
-from shapely.wkt import loads
-
 class NetworkFacesQGIS(QgsProcessingAlgorithm):
     """
     Create the network faces
@@ -83,6 +78,9 @@ class NetworkFacesQGIS(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen.utils import network_faces
+        from shapely import Polygon
+        from shapely.wkt import loads
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
@@ -158,7 +156,8 @@ class NetworkFacesQGIS(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)

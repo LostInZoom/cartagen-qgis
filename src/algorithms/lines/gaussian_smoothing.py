@@ -35,15 +35,6 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas as gpd
-import pandas
-from cartagen4qgis import PLUGIN_ICON
-from cartagen import gaussian_smoothing
-from cartagen4qgis.src.tools import list_to_qgis_feature_2
-
-from shapely import Polygon
-from shapely.wkt import loads
-
 class GaussianSmoothing(QgsProcessingAlgorithm):
     """
     Smooth a line and attenuate its inflexion points.
@@ -111,7 +102,8 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def shortHelpString(self):
         """
@@ -184,6 +176,12 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        import geopandas as gpd
+        import pandas
+        from cartagen import gaussian_smoothing
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+        from shapely import Polygon
+        from shapely.wkt import loads
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the

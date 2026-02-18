@@ -45,15 +45,6 @@ from qgis.core import (
     QgsProcessingParameterDistance,
 )
 
-import geopandas as gpd
-
-from cartagen.enrichment import detect_dead_ends
-from cartagen import eliminate_dead_ends
-
-from cartagen4qgis import PLUGIN_ICON
-from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
-
-
 class DetectDeadEnds(QgsProcessingAlgorithm):
     """
     This function detects dead ends inside a road network. Returns the same road network layer with new attributes, including 'deadend' which indicates if the entity is a dead end or not (boolean).
@@ -135,7 +126,8 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def initAlgorithm(self, config):
         """
@@ -175,6 +167,10 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        import geopandas as gpd
+        from cartagen.enrichment import detect_dead_ends
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT, context)
         
@@ -331,7 +327,8 @@ class EliminateDeadEnds(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def initAlgorithm(self, config):
         """
@@ -379,6 +376,10 @@ class EliminateDeadEnds(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        import geopandas as gpd
+        from cartagen import eliminate_dead_ends
+        from cartagen4qgis.src.tools import list_to_qgis_feature
+
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT, context)
  	

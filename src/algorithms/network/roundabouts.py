@@ -36,16 +36,6 @@ from qgis.core import (
 )
 from qgis.PyQt.QtWidgets import QMessageBox
 
-from cartagen.enrichment.network import is_roundabout
-from cartagen import collapse_roundabouts, network_faces
-
-from cartagen4qgis import PLUGIN_ICON
-from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
-
-import geopandas as gpd
-from shapely import Polygon
-from shapely.wkt import loads
-
 class DetectRoundaboutsQGIS(QgsProcessingAlgorithm):
     """
         Detect dead-ends groups.
@@ -141,6 +131,13 @@ class DetectRoundaboutsQGIS(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen.enrichment.network import is_roundabout
+        from cartagen import collapse_roundabouts, network_faces
+        from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
+        import geopandas as gpd
+        from shapely import Polygon
+        from shapely.wkt import loads
+
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT, context)
 
@@ -256,7 +253,8 @@ class DetectRoundaboutsQGIS(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
@@ -374,6 +372,13 @@ class CollapseRoundaboutsQGIS(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen.enrichment.network import is_roundabout
+        from cartagen import collapse_roundabouts, network_faces
+        from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
+        import geopandas as gpd
+        from shapely import Polygon
+        from shapely.wkt import loads
+        
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT_ROAD, context)
 
@@ -458,7 +463,8 @@ class CollapseRoundaboutsQGIS(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)

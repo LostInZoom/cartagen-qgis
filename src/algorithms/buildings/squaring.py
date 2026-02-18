@@ -25,11 +25,6 @@ from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import QgsProcessing, QgsFeatureSink, QgsProcessingAlgorithm, QgsFeature, QgsGeometry, QgsProcessingParameterDefinition
 from qgis.core import QgsProcessingParameterFeatureSource, QgsProcessingParameterFeatureSink, QgsProcessingParameterNumber
 
-from cartagen4qgis import PLUGIN_ICON
-from cartagen import square_polygon_ls
-from shapely import Polygon
-from shapely.wkt import loads
-
 class SquaringQGIS(QgsProcessingAlgorithm):
     """
     Square buildings using the least square method
@@ -176,6 +171,9 @@ class SquaringQGIS(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen import square_polygon_ls
+        from shapely import Polygon
+        from shapely.wkt import loads
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
@@ -281,7 +279,8 @@ class SquaringQGIS(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def shortHelpString(self):
         """

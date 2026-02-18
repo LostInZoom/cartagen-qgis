@@ -37,15 +37,6 @@ from qgis.core import (
 )
 from qgis.PyQt.QtWidgets import QMessageBox
 
-from cartagen import rural_traffic
-
-from cartagen4qgis import PLUGIN_ICON
-from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
-
-import geopandas as gpd
-from shapely import Polygon
-from shapely.wkt import loads
-
 class RuralTraffic(QgsProcessingAlgorithm):
     """
         Detect central roads inside a network using traffic simulation.
@@ -203,6 +194,12 @@ class RuralTraffic(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen import rural_traffic
+        from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
+        import geopandas as gpd
+        from shapely import Polygon
+        from shapely.wkt import loads
+
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.ROAD_INPUT, context)
         gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
@@ -372,7 +369,8 @@ class RuralTraffic(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)

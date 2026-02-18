@@ -38,13 +38,6 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas as gpd
-from cartagen4qgis import PLUGIN_ICON
-from cartagen import visvalingam_whyatt, raposo, douglas_peucker
-from shapely.wkt import loads
-
-from cartagen4qgis.src.tools import qgis_source_to_geodataframe, list_to_qgis_feature_2
-
 class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
     """
     Simplify lines using the Visvalingam-Whyatt algorithm
@@ -97,6 +90,10 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        import geopandas as gpd
+        from cartagen import visvalingam_whyatt, raposo, douglas_peucker
+        from shapely.wkt import loads
+        from cartagen4qgis.src.tools import qgis_source_to_geodataframe, list_to_qgis_feature_2
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
@@ -180,7 +177,8 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
@@ -278,6 +276,10 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        import geopandas as gpd
+        from cartagen import visvalingam_whyatt, raposo, douglas_peucker
+        from shapely.wkt import loads
+        from cartagen4qgis.src.tools import qgis_source_to_geodataframe, list_to_qgis_feature_2
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
@@ -366,7 +368,8 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def shortHelpString(self):
         """
@@ -457,7 +460,8 @@ class DouglasPeucker(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def shortHelpString(self):
         """
@@ -519,6 +523,10 @@ class DouglasPeucker(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        import geopandas as gpd
+        from cartagen import visvalingam_whyatt, raposo, douglas_peucker
+        from shapely.wkt import loads
+        from cartagen4qgis.src.tools import qgis_source_to_geodataframe, list_to_qgis_feature_2
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the

@@ -37,15 +37,6 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QVariant
 
-from cartagen.enrichment.network import strokes_roads
-
-from cartagen4qgis import PLUGIN_ICON
-from cartagen4qgis.src.tools import list_to_qgis_feature
-
-import geopandas as gpd
-from shapely import Polygon
-from shapely.wkt import loads
-
 class BuildStrokes(QgsProcessingAlgorithm):
     """
     This method computes the strokes in a Strokenetwork using a loop on network features, and updates its strokes attribute.
@@ -126,6 +117,12 @@ class BuildStrokes(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen.enrichment.network import strokes_roads
+        from cartagen4qgis.src.tools import list_to_qgis_feature
+        import geopandas as gpd
+        from shapely import Polygon
+        from shapely.wkt import loads
+
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT, context)
 
@@ -211,7 +208,8 @@ class BuildStrokes(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)

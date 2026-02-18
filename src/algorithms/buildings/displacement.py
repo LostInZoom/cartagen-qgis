@@ -35,13 +35,6 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas as gpd
-from cartagen4qgis import PLUGIN_ICON
-from cartagen import random_displacement, partition_networks
-
-from shapely import Polygon
-from shapely.wkt import loads
-
 class BuildingDisplacementRandomQGIS(QgsProcessingAlgorithm):
     """
     Iteratively displace polygons overlapping each other and the provided network.
@@ -191,6 +184,10 @@ class BuildingDisplacementRandomQGIS(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        import geopandas as gpd
+        from cartagen import random_displacement, partition_networks
+        from shapely import Polygon
+        from shapely.wkt import loads
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
@@ -300,7 +297,8 @@ class BuildingDisplacementRandomQGIS(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def shortHelpString(self):
         """

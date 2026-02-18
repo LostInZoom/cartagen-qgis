@@ -48,14 +48,6 @@ from qgis.core import (
     QgsProcessingParameterField
 )
 
-from cartagen.enrichment import detect_dual_carriageways
-from cartagen import collapse_dual_carriageways
-
-from cartagen4qgis import PLUGIN_ICON
-from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
-
-import geopandas as gpd
-
 class DetectDualCarriageways(QgsProcessingAlgorithm):
     """
     Detect dual carriageways based on geometric properties.
@@ -168,7 +160,8 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def initAlgorithm(self, config):
         """
@@ -280,6 +273,12 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen.enrichment import detect_dual_carriageways
+        from cartagen import collapse_dual_carriageways
+        from cartagen4qgis import get_plugin_icon
+        from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
+        import geopandas as gpd
+
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT, context)
       
@@ -439,7 +438,8 @@ class CollapseDualCarriageways(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def initAlgorithm(self, config):
         """
@@ -493,6 +493,10 @@ class CollapseDualCarriageways(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen.enrichment import detect_dual_carriageways
+        from cartagen import collapse_dual_carriageways
+        from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
+        import geopandas as gpd
       
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT_ROAD, context)

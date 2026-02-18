@@ -38,19 +38,6 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-import geopandas as gpd
-import pandas
-from cartagen4qgis import PLUGIN_ICON
-from cartagen import (
-    kmeans_selection, kmeans_simplification, kmeans_aggregation,
-    labelgrid_selection, labelgrid_simplification, labelgrid_aggregation,
-    quadtree_selection, quadtree_simplification, quadtree_aggregation
-)
-from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
-
-from shapely import Polygon
-from shapely.wkt import loads
-
 class ReduceKmeans(QgsProcessingAlgorithm):
     """
     Reduce a set of points using K-Means clustering.
@@ -140,7 +127,8 @@ class ReduceKmeans(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def shortHelpString(self):
         """
@@ -218,7 +206,20 @@ class ReduceKmeans(QgsProcessingAlgorithm):
     def processAlgorithm(self, parameters, context, feedback):
         """
         Here is where the processing itself takes place.
-        """ 
+        """
+        import geopandas as gpd
+        import pandas
+        from cartagen4qgis import get_plugin_icon
+        from cartagen import (
+            kmeans_selection, kmeans_simplification, kmeans_aggregation,
+            labelgrid_selection, labelgrid_simplification, labelgrid_aggregation,
+            quadtree_selection, quadtree_simplification, quadtree_aggregation
+        )
+        from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
+
+        from shapely import Polygon
+        from shapely.wkt import loads
+
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
@@ -354,7 +355,8 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def shortHelpString(self):
         """
@@ -462,6 +464,19 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """ 
+        import geopandas as gpd
+        import pandas
+        from cartagen4qgis import get_plugin_icon
+        from cartagen import (
+            kmeans_selection, kmeans_simplification, kmeans_aggregation,
+            labelgrid_selection, labelgrid_simplification, labelgrid_aggregation,
+            quadtree_selection, quadtree_simplification, quadtree_aggregation
+        )
+        from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
+
+        from shapely import Polygon
+        from shapely.wkt import loads
+
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
@@ -624,7 +639,8 @@ class ReduceQuadtree(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def shortHelpString(self):
         """
@@ -713,6 +729,19 @@ class ReduceQuadtree(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """ 
+        import geopandas as gpd
+        import pandas
+        from cartagen4qgis import get_plugin_icon
+        from cartagen import (
+            kmeans_selection, kmeans_simplification, kmeans_aggregation,
+            labelgrid_selection, labelgrid_simplification, labelgrid_aggregation,
+            quadtree_selection, quadtree_simplification, quadtree_aggregation
+        )
+        from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
+
+        from shapely import Polygon
+        from shapely.wkt import loads
+
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.

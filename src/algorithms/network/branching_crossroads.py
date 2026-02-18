@@ -37,16 +37,6 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QVariant, QDateTime
 from qgis.PyQt.QtWidgets import QMessageBox
 
-import math
-import geopandas as gpd
-from shapely import Polygon
-from shapely.wkt import loads
-
-from cartagen import detect_branching_crossroads, collapse_branching_crossroads
-
-from cartagen4qgis import PLUGIN_ICON
-from cartagen4qgis.src.tools import list_to_qgis_feature
-
 class DetectBranchingCrossroads(QgsProcessingAlgorithm):
     """
     Detect branching crossroads based on geometric properties.
@@ -172,7 +162,8 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
 
     def initAlgorithm(self, config):
@@ -261,6 +252,12 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        import geopandas as gpd
+        from shapely import Polygon
+        from shapely.wkt import loads
+        from cartagen import detect_branching_crossroads, collapse_branching_crossroads
+        from cartagen4qgis.src.tools import list_to_qgis_feature
+
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT_ROAD, context)
 
@@ -433,7 +430,8 @@ class CollapseBranchingCrossroads(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def initAlgorithm(self, config):
         """
@@ -482,6 +480,11 @@ class CollapseBranchingCrossroads(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        import geopandas as gpd
+        from shapely import Polygon
+        from shapely.wkt import loads
+        from cartagen import detect_branching_crossroads, collapse_branching_crossroads
+        from cartagen4qgis.src.tools import list_to_qgis_feature
       
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT_ROAD, context)

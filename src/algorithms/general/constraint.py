@@ -37,12 +37,6 @@ from qgis.core import (
     QgsProcessingOutputMultipleLayers
 )
 
-import geopandas
-from cartagen4qgis import PLUGIN_ICON
-from cartagen import LeastSquaresMethod
-from shapely import Polygon
-from shapely.wkt import loads
-
 class ConstraintMethodQGIS(QgsProcessingAlgorithm):
     """
     Iteratively and randomly displace buildings to avoid spatial conflicts
@@ -129,6 +123,10 @@ class ConstraintMethodQGIS(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        import geopandas
+        from cartagen import LeastSquaresMethod
+        from shapely import Polygon
+        from shapely.wkt import loads
 
     def name(self):
         """
@@ -169,7 +167,8 @@ class ConstraintMethodQGIS(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)

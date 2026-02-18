@@ -25,16 +25,10 @@ from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import QgsProcessing, QgsFeatureSink, QgsProcessingAlgorithm, QgsFeature, QgsGeometry, QgsProcessingParameterDefinition
 from qgis.core import QgsProcessingParameterFeatureSource, QgsProcessingParameterFeatureSink, QgsProcessingParameterNumber
 
-from cartagen4qgis import PLUGIN_ICON
-from cartagen import simplify_building
-from shapely.wkt import loads
-import math
-
 class BuildingSimplificationRuasQGIS(QgsProcessingAlgorithm):
     """
     Simplify buildings
     """
-
     # Constants used to refer to parameters and outputs. They will be
     # used when calling the algorithm from another algorithm, or when
     # calling from the QGIS console.
@@ -50,6 +44,7 @@ class BuildingSimplificationRuasQGIS(QgsProcessingAlgorithm):
         Here we define the inputs and output of the algorithm, along
         with some other properties.
         """
+        import math
 
         # We add the input vector features source.
         self.addParameter(
@@ -107,6 +102,8 @@ class BuildingSimplificationRuasQGIS(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen import simplify_building
+        from shapely.wkt import loads
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
@@ -200,7 +197,8 @@ class BuildingSimplificationRuasQGIS(QgsProcessingAlgorithm):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return PLUGIN_ICON
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
