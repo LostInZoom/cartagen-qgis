@@ -6,7 +6,7 @@
 name=CartAGen
 qgisMinimumVersion=3.0
 description=Cartographic generalization
-version=1.0.3
+version=1.0.4
 author=Guillaume Touya, Justin Berli & Paul Bourcier
 email=guillaume.touya@ign.fr
 
