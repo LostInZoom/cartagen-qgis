@@ -119,7 +119,7 @@ class CartAGen4QGISPlugin(object):
             msg.setText("This plugin requires the CartAGen Python library to properly work.")
             
             msg.setInformativeText(
-                f"CartAGen will be installed within the Python environment used by QGIS:\n\n"
+                f"CartAGen will be installed within the Python environment used by QGIS.\n\n"
                 f"Proceed?"
             )
             
@@ -227,7 +227,7 @@ class CartAGen4QGISPlugin(object):
             from qgis.PyQt.QtWidgets import QDialog, QVBoxLayout, QTextBrowser, QPushButton, QMessageBox, QApplication
             
             dialog = QDialog()
-            dialog.setWindowTitle("Dependencies installation (using QGIS with Flatpak)")
+            dialog.setWindowTitle("Missing dependencies for the CartAGen plugin")
             dialog.setMinimumWidth(650)
             dialog.setMinimumHeight(500)
             
@@ -236,9 +236,9 @@ class CartAGen4QGISPlugin(object):
             text_browser = QTextBrowser()
             text_browser.setOpenExternalLinks(True)
             text_browser.setHtml("""
-                <h2>Detected QGIS installed with Flatpak - Dependencies required</h2>
+                <h2>Detected QGIS installed with Flatpak - Dependencies required for CartAGen plugin</h2>
                 
-                <p>This plugin needs some Python dependencies to properly work. You need
+                <p>CartAGen needs some Python dependencies to properly work. You need
                 to install them within the Python environment used by QGIS.</p>
                 
                 <h3>Instructions :</h3>
@@ -250,15 +250,13 @@ class CartAGen4QGISPlugin(object):
                 </ol>
                 
                 <pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; font-family: monospace;">
-# Install CartAGen
-flatpak run --devel --command=pip3 org.qgis.qgis install cartagen --user
+flatpak run --devel --command=pip3 org.qgis.qgis install cartagen
                 </pre>
                 
                 <p><b>Note :</b> If you get an error with <code>--devel</code>, 
-                you should first install the SDK:</p>
+                you should first install the SDK (replace VERSION with the version returned in the error):</p>
                 
                 <pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; font-family: monospace;">
-# Replace VERSION by the version that appears in the error
 flatpak install org.kde.Sdk/x86_64/VERSION
                 </pre>
                 
@@ -293,7 +291,7 @@ flatpak install org.kde.Sdk/x86_64/VERSION
         """Copy flatpak commands in the clipboard"""
         try:
             from qgis.PyQt.QtWidgets import QMessageBox, QApplication
-            commands = """flatpak run --devel --command=pip3 org.qgis.qgis install cartagen --user"""
+            commands = """flatpak run --devel --command=pip3 org.qgis.qgis install cartagen"""
             QApplication.clipboard().setText(commands)
             QMessageBox.information(
                 None,
