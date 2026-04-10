@@ -191,7 +191,7 @@ class MorphologicalAmalgamation(QgsProcessingAlgorithm):
         """
         import geopandas as gpd
         import pandas
-        from cartagen import morphological_amalgamation, partition_networks
+        from cartagen import amalgamate_buildings_morphological, partition_networks
         from cartagen4qgis.src.tools import list_to_qgis_feature
         from shapely import Polygon
         from shapely.wkt import loads
@@ -221,7 +221,7 @@ class MorphologicalAmalgamation(QgsProcessingAlgorithm):
         # Use the CartAGen algorithm with or without network partitionning
         # Convert the result to a list of QgsFeature()
         if len(network_part) == 0 or activate_network_part == False:
-            amal = morphological_amalgamation(list(gdf.geometry),buffer = buffer, edge_length = edge_length)
+            amal = amalgamate_buildings_morphological(list(gdf.geometry),buffer = buffer, edge_length = edge_length)
             amal_gdf = gpd.GeoDataFrame(geometry=gpd.GeoSeries(amal))
             res = amal_gdf.to_dict('records')     
         else:
@@ -231,7 +231,7 @@ class MorphologicalAmalgamation(QgsProcessingAlgorithm):
                 amal = gdf.copy()
                 gdf = gdf.iloc[part[0][i]]
                 try:
-                    generalized = morphological_amalgamation(list(gdf.geometry), buffer = buffer, edge_length = edge_length)
+                    generalized = amalgamate_buildings_morphological(list(gdf.geometry), buffer = buffer, edge_length = edge_length)
                     
                 except: 
                     generalized = gdf.geometry

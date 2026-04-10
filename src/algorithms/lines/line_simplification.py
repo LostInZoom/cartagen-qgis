@@ -91,7 +91,7 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
         Here is where the processing itself takes place.
         """
         import geopandas as gpd
-        from cartagen import visvalingam_whyatt, raposo, douglas_peucker
+        from cartagen import simplify_visvalingam_whyatt, simplify_raposo, simplify_douglas_peucker
         from shapely.wkt import loads
         from cartagen4qgis.src.tools import qgis_source_to_geodataframe, list_to_qgis_feature_2
 
@@ -116,7 +116,7 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
             shapely_geom = loads(wkt)
 
             # CartAGen's algorithm
-            simplified = visvalingam_whyatt(shapely_geom, self.parameterAsInt(parameters,self.TOLERANCE,context))
+            simplified = simplify_visvalingam_whyatt(shapely_geom, self.parameterAsInt(parameters,self.TOLERANCE,context))
 
             result = QgsFeature()
             result.setGeometry(QgsGeometry.fromWkt(simplified.wkt))
@@ -277,7 +277,7 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
         Here is where the processing itself takes place.
         """
         import geopandas as gpd
-        from cartagen import visvalingam_whyatt, raposo, douglas_peucker
+        from cartagen import simplify_visvalingam_whyatt, simplify_raposo, simplify_douglas_peucker
         from shapely.wkt import loads
         from cartagen4qgis.src.tools import qgis_source_to_geodataframe, list_to_qgis_feature_2
 
@@ -301,7 +301,7 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
             wkt = feature.geometry().asWkt()
             shapely_geom = loads(wkt)
 
-            simplified = raposo(
+            simplified = simplify_raposo(
                 shapely_geom,
                 self.parameterAsInt(parameters,self.INITIAL_SCALE,context),
                 self.parameterAsInt(parameters,self.FINAL_SCALE,context),
@@ -524,7 +524,7 @@ class DouglasPeucker(QgsProcessingAlgorithm):
         Here is where the processing itself takes place.
         """
         import geopandas as gpd
-        from cartagen import visvalingam_whyatt, raposo, douglas_peucker
+        from cartagen import simplify_visvalingam_whyatt, simplify_raposo, simplify_douglas_peucker
         from shapely.wkt import loads
         from cartagen4qgis.src.tools import qgis_source_to_geodataframe, list_to_qgis_feature_2
 
@@ -542,7 +542,7 @@ class DouglasPeucker(QgsProcessingAlgorithm):
         # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
         dp = gdf.copy()
         for i in range(len(gdf)):
-            dp.loc[i,'geometry'] = douglas_peucker(list(gdf.geometry)[i],threshold=threshold, preserve_topology=preserve_topology)
+            dp.loc[i,'geometry'] = simplify_douglas_peucker(list(gdf.geometry)[i],threshold=threshold, preserve_topology=preserve_topology)
             res = dp.to_dict('records')
             res = list_to_qgis_feature_2(res, source.fields())
 

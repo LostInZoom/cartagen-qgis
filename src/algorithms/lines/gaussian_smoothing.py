@@ -178,7 +178,7 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
         """
         import geopandas as gpd
         import pandas
-        from cartagen import gaussian_smoothing
+        from cartagen import smooth_gaussian
         from cartagen4qgis.src.tools import list_to_qgis_feature_2
         from shapely import Polygon
         from shapely.wkt import loads
@@ -204,7 +204,7 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
             gs = gdf.copy()
             for i in range(len(gdf)):
                 #try:
-                gs.loc[i,'geometry'] = gaussian_smoothing(list(gs.geometry)[i], sigma= sigma, sample= sample, densify = densify)
+                gs.loc[i,'geometry'] = smooth_gaussian(list(gs.geometry)[i], sigma= sigma, sample= sample, densify = densify)
                 # except:
                 #     gs.loc[i,'geometry'] = gs.loc[i,'geometry'] 
                 
@@ -217,7 +217,7 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
             gs = gdf.copy()
             for i in range(len(gdf)):
                 try:
-                    gs.loc[i,'geometry'] = gaussian_smoothing(list(gs.geometry)[i], sigma= sigma, sample= sample, densify = densify)
+                    gs.loc[i,'geometry'] = smooth_gaussian(list(gs.geometry)[i], sigma= sigma, sample= sample, densify = densify)
                 except:
                     gs.loc[i,'geometry'] = gs.loc[i,'geometry']
             
