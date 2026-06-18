@@ -116,6 +116,17 @@ class SquaringPolygonLS(QgsProcessingAlgorithm):
         """
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[1]
+        description = self.tr(first_line)
+        
+        return(description)    
 
     def shortHelpString(self):
         """
@@ -392,6 +403,17 @@ class SquaringPolygonNaive(QgsProcessingAlgorithm):
         """
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[2]
+        description = self.tr(first_line)
+        
+        return(description)
 
     def shortHelpString(self):
         """

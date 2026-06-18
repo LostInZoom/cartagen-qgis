@@ -130,6 +130,17 @@ class ReduceKmeans(QgsProcessingAlgorithm):
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
 
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
+
     def shortHelpString(self):
         """
         Returns a localised short helper string for the algorithm. This string
@@ -137,11 +148,17 @@ class ReduceKmeans(QgsProcessingAlgorithm):
         parameters and outputs associated with it..
         """
         helpstring = """
-            Reduce a set of points using K-Means clustering. 'selection': inside the cluster, only point with the largest value in the chosen field is retained. This option requires the field parameter to be provided. 'simplification': the point retained in the cluster is the closest to the centroid of the cluster. 'aggregation': the points are all aggregated to the centroid of the cluster. The count of point is added as a new attribute. If a column name is provided, also adds the sum of the attribute.
+            Reduce a set of points using K-Means clustering. 
             <h3> Parameters: </h3>
             <ul>
                 <li> - <em>Ratio</em> : a value between 0 (all points are removed) and 1 (all points are kept).</li>
                 <li> - <em>Mode</em> : there are three available modes:</li>
+                <ul>
+                    <li> . 'selection': inside the cluster, only point with the largest value in the chosen field is retained. This option requires the field parameter to be provided. </li>
+                    <li> . 'simplification': the point retained in the cluster is the closest to the centroid of the cluster. </li>
+                    <li> . 'aggregation': the points are all aggregated to the centroid of the cluster. The count of point is added as a new attribute. If a column name is provided, also adds the sum of the attribute.</li>
+                </ul>
+
             </ul>
             For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.kmeans_aggregation.html#cartagen.kmeans_aggregation">help online</a>.
         """
@@ -366,6 +383,17 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
         """
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
 
     def shortHelpString(self):
         """
@@ -665,6 +693,17 @@ class ReduceQuadtree(QgsProcessingAlgorithm):
         """
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
 
     def shortHelpString(self):
         """
@@ -674,12 +713,16 @@ class ReduceQuadtree(QgsProcessingAlgorithm):
         """
         helpstring = """
             Reduce a set of points using a quadtree. 
-            The quadtree algorithm iteratively divide the point set into four chunks, creating clusters, until the depth parameter is reach or only one point remain per cluster. ’selection’: for one cell, the algorithm retains the point with the largest value in the chosen column, weighted by the depth of the point. This option requires the column parameter to be provided. ’simplification’: the point retained in the cell is the closest to the center of the cell. ’aggregation’: the points are all aggregated to the centroid of the cell. The count of point is added as a new attribute. If a column name is provided, also adds the sum of the attribute.
-            
+            The quadtree algorithm iteratively divide the point set into four chunks, creating clusters, until the depth parameter is reach or only one point remain per cluster. 
             <h3> Parameters: </h3>
             <ul>
                 <li> - <em>Depth</em> : the maximum depth of the quadtree. This acts as a selector for the wanted degree of generalisation. The lower the value, the more generalised the point set will be.</li>
                 <li> - <em>Mode</em> : there are three available modes:</li>
+                <ul>
+                    <li>. ’selection’: for one cell, the algorithm retains the point with the largest value in the chosen column, weighted by the depth of the point. This option requires the column parameter to be provided. </li>
+                    <li>. ’simplification’: the point retained in the cell is the closest to the center of the cell. </li>
+                    <li>. ’aggregation’: the points are all aggregated to the centroid of the cell. The count of point is added as a new attribute. If a column name is provided, also adds the sum of the attribute.</li>
+                </ul>
                 <li> - <em>Field name</em> : name of the field to use.</li>
                 <li> - <em>Quadtree</em> : if set to True, returns the reduced points and the quadtree.</li>
             </ul>

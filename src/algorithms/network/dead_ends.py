@@ -112,6 +112,17 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
         formatting characters.
         """
         return 'Network'
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)    
 
     def shortHelpString(self):
         """
@@ -323,6 +334,17 @@ class EliminateDeadEnds(QgsProcessingAlgorithm):
         formatting characters.
         """
         return 'Network'
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
 
     def shortHelpString(self):
         """

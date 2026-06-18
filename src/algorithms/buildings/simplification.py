@@ -48,6 +48,17 @@ class BuildingSimplificationRuasQGIS(QgsProcessingAlgorithm):
         formatting characters.
         """
         return 'Simplification Ruas'
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
 
     def shortHelpString(self):
         """
@@ -67,7 +78,6 @@ class BuildingSimplificationRuasQGIS(QgsProcessingAlgorithm):
             For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.regularize_building_regression.html">help online</a>.
             """)
         
-
     def displayName(self):
         """
         Returns the translated algorithm name, which should be used for any
@@ -102,7 +112,6 @@ class BuildingSimplificationRuasQGIS(QgsProcessingAlgorithm):
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
-    
     
     def initAlgorithm(self, config):
         """

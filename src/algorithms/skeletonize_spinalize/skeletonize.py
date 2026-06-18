@@ -83,7 +83,7 @@ class SkelNatural(QgsProcessingAlgorithm):
         formatting characters.
         """
 
-        return "Polygons"
+        return "Skeletonize and Spinalize polygons"
     
     def group(self):
         
@@ -103,7 +103,18 @@ class SkelNatural(QgsProcessingAlgorithm):
 
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
-    
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[3]
+        description = self.tr(first_line)
+        
+        return(description)
+
     def shortHelpString(self):
 
         """
@@ -286,7 +297,7 @@ class SkelArtificial(QgsProcessingAlgorithm):
         formatting characters.
         """
 
-        return "Polygons"
+        return "Skeletonize and Spinalize polygons"
     
     def group(self):
         
@@ -306,7 +317,18 @@ class SkelArtificial(QgsProcessingAlgorithm):
 
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
-    
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[2]
+        description = self.tr(first_line)
+        
+        return(description)
+
     def shortHelpString(self):
 
         """
@@ -526,7 +548,7 @@ class SkelNetwork(QgsProcessingAlgorithm):
         formatting characters.
         """
 
-        return "Polygons"
+        return "Skeletonize and Spinalize polygons"
     
     def group(self):
         
@@ -546,15 +568,24 @@ class SkelNetwork(QgsProcessingAlgorithm):
 
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
-    
-    def shortHelpString(self):
 
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[2]
+        description = self.tr(first_line)
+        
+        return(description)
+
+    def shortHelpString(self):
         """
         Returns a localised short helper string for the algorithm. This string
         should provide a basic description about what the algorithm does and the
         parameters and outputs associated with it..
         """
-
         helpstring = self.tr("""
             <b>/!\ If you don't drop Z and M, it won't work ! /!\</b>
                              

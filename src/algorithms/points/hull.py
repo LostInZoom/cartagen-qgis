@@ -106,6 +106,17 @@ class HullDelaunay(QgsProcessingAlgorithm):
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
 
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[4]
+        description = self.tr(first_line)
+        
+        return(description)
+
     def shortHelpString(self):
         """
         Returns a localised short helper string for the algorithm. This string
@@ -113,10 +124,13 @@ class HullDelaunay(QgsProcessingAlgorithm):
         parameters and outputs associated with it..
         """
         helpstring = """
-            <b> Warning : this algorithm cannot create multiple polygons, unlike hull_swinging_arm(). Using a length too low can produce an invalid geometry. Create the hull of a set of points using the Delaunay triangulation.</b>
-
-            This algorithm first computes the Delaunay triangulation of the points, and then removes iteratively the boundary edges that are longer than a given parameter. 
+            <b> /!\ Cannot create multiple polygons, unlike hull_swinging_arm() /!\ </b>
             
+            <b> /!\ Using a length too low can produce an invalid geometry /!\ </b>
+            
+            Create the hull of a set of points using the Delaunay triangulation.
+            This algorithm first computes the Delaunay triangulation of the points, and then removes iteratively the boundary edges that are longer than a given parameter. 
+
             <h3> Parameters: </h3>
             <ul>
                 <li> - <em>Length</em>: the length in meters below which the Delaunay triangles edges are removed.</li>
@@ -292,6 +306,17 @@ class HullSwingingArm(QgsProcessingAlgorithm):
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
 
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
+
     def shortHelpString(self):
         """
         Returns a localised short helper string for the algorithm. This string
@@ -343,7 +368,6 @@ class HullSwingingArm(QgsProcessingAlgorithm):
             optional=False
         )
         self.addParameter(length)
-
 
         directions = ['cw', 'ccw']
         direction = QgsProcessingParameterEnum(
@@ -403,8 +427,8 @@ class HullSwingingArm(QgsProcessingAlgorithm):
         res = res.to_dict('records')
 
         if not res :
-            from qgis.PyQt.QtWidgets import QMessageBox
-            QMessageBox.warning(None, "Empty output", f"The length of the arm ({length}) is too small. The polygon of the hull can't be created.")
+            feedback.pushInfo("ERROR WITH CARTAGEN :")
+            feedback.pushInfo(f"The length of the arm ({length}) is too small. The polygon of the hull can't be created.")
 
             feature = QgsFeature() #create a QgsFeature()
             (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,

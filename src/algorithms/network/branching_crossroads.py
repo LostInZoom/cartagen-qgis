@@ -148,6 +148,17 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
         formatting characters.
         """
         return 'Network'
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)    
 
     def shortHelpString(self):
         """
@@ -155,10 +166,9 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
         should provide a basic description about what the algorithm does and the
         parameters and outputs associated with it..
         """
-
         helpstring = """
-        Link to the doc : https://cartagen.readthedocs.io/en/latest/reference/cartagen.detect_branching_crossroads.html#cartagen.detect_branching_crossroads
-        Detect branching crossroads based on geometric properties. This algorithm proposed by Touya detects branching crossroads inside a road network based on the proximity between the geometry of the network face and a triangle.
+        Detect branching crossroads based on geometric properties. 
+        This algorithm proposed by Touya detects branching crossroads inside a road network based on the proximity between the geometry of the network face and a triangle.
         <h3> Parameters: </h3>
         <ul>
             <li> - <em>Roundabouts</em> : the polygons representing the network faces considered as roundabouts. If provided, links the branching crossroad to a roundabout for collapsing.</li>
@@ -431,6 +441,17 @@ class CollapseBranchingCrossroads(QgsProcessingAlgorithm):
         formatting characters.
         """
         return 'Network'
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)    
 
     def shortHelpString(self):
         """

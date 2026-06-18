@@ -53,6 +53,12 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         
         from .algorithms import (
 
+            #Boundaries
+            BoundariesDouglasPeucker,
+            BoundariesRaposo,
+            BoundariesLiOpenshaw,
+            BoundariesVisvalingam,
+
             #Buildings
             BoffetArea,
             ClosePolygon,
@@ -65,25 +71,8 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
             SquaringPolygonLS,
             SquaringPolygonNaive,
 
-            #Bends
-
-            #General
-            BuildStrokes,
-            NetworkFacesQGIS,
-
-            #Lines
-            CatmullRomSmoothing,
-            ChaikinSmoothing,
-            GaussianSmoothing,
-            DouglasPeucker,
-            Lang,
-            LiOpenshaw,
-            RaposoSimplificationQGIS,
-            ReumannWitkam,
-            VisvalingamWhyattQGIS,
-            Whirlpool,
-
             #Network
+            BuildStrokes,
             CollapseRoundaboutsQGIS,
             CollapseBranchingCrossroads,
             CollapseDualCarriageways,
@@ -94,6 +83,9 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
             DetectDualCarriageways,
             RuralTraffic,
 
+            #Partitioning
+            NetworkFacesQGIS,
+
             #Points
             VectorHeatmap,
             HullDelaunay,
@@ -102,15 +94,39 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
             ReduceLabelgrid,
             ReduceQuadtree,
 
-            #Polygons
-            BoundariesVisvalingam,
-            BoundariesDouglasPeucker,
-            BoundariesRaposo,
-            BoundariesLiOpenshaw,
+            #Simplify
+            SimplifyAngular,
+            DouglasPeucker,
+            Lang,
+            LiOpenshaw,
+            RaposoSimplificationQGIS,
+            ReumannWitkam,
+            VisvalingamWhyattQGIS,
+            SimplifyWangMuller,
+            Whirlpool,
+
+            #Skeletonize And Spinalize
             SkelNatural,
             SkelArtificial,
-            SkelNetwork
+            SkelNetwork,
+            
+            #Smooth
+            CatmullRomSmoothing,
+            ChaikinSmoothing,
+            GaussianSmoothing,
+            SmoothPlatre,
+            SmoothSnake,
+            SmoothTaubin,
+            SmoothTopographic,
+            SmoothWMA
+
         )
+
+        #Boundaries
+        self.addAlgorithm(BoundariesDouglasPeucker())
+        self.addAlgorithm(BoundariesLiOpenshaw())
+        self.addAlgorithm(BoundariesRaposo())
+        self.addAlgorithm(BoundariesVisvalingam())
 
         # Buildings
         self.addAlgorithm(SquaringPolygonLS())
@@ -124,22 +140,8 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         self.addAlgorithm(BuildingRectangle())
         self.addAlgorithm(BuildingRegression())
         
-        # Lines
-        self.addAlgorithm(DouglasPeucker())
-        self.addAlgorithm(Lang())
-        self.addAlgorithm(LiOpenshaw())
-        self.addAlgorithm(RaposoSimplificationQGIS())
-        self.addAlgorithm(ReumannWitkam())
-        self.addAlgorithm(VisvalingamWhyattQGIS())
-        self.addAlgorithm(Whirlpool())
-        self.addAlgorithm(GaussianSmoothing())
-        self.addAlgorithm(CatmullRomSmoothing())
-        self.addAlgorithm(ChaikinSmoothing())
-        
-        # General
-        # self.addAlgorithm(ConstraintMethodQGIS())
-
         # Network
+        self.addAlgorithm(BuildStrokes())
         self.addAlgorithm(DetectRoundaboutsQGIS())
         self.addAlgorithm(DetectDeadEnds())
         self.addAlgorithm(EliminateDeadEnds())
@@ -148,10 +150,9 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         self.addAlgorithm(CollapseBranchingCrossroads())
         self.addAlgorithm(DetectDualCarriageways())
         self.addAlgorithm(CollapseDualCarriageways())
-        self.addAlgorithm(BuildStrokes())
         self.addAlgorithm(RuralTraffic())
 
-        # Tools
+        # Partitioning
         self.addAlgorithm(NetworkFacesQGIS())
         
         # Points
@@ -162,15 +163,35 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         self.addAlgorithm(HullSwingingArm())
         self.addAlgorithm(VectorHeatmap())
 
-        #Polygon
+        # Processes
+        # self.addAlgorithm(ConstraintMethodQGIS())
+
+        # Simplify
+        self.addAlgorithm(SimplifyAngular())
+        self.addAlgorithm(DouglasPeucker())
+        self.addAlgorithm(Lang())
+        self.addAlgorithm(LiOpenshaw())
+        self.addAlgorithm(RaposoSimplificationQGIS())
+        self.addAlgorithm(ReumannWitkam())
+        self.addAlgorithm(VisvalingamWhyattQGIS())
+        self.addAlgorithm(SimplifyWangMuller())
+        self.addAlgorithm(Whirlpool())
+
+        #Skeletonize and Spinalize
         self.addAlgorithm(SkelNatural())
         self.addAlgorithm(SkelArtificial())
         self.addAlgorithm(SkelNetwork())
-        self.addAlgorithm(BoundariesVisvalingam())
-        self.addAlgorithm(BoundariesDouglasPeucker())
-        self.addAlgorithm(BoundariesRaposo())
-        self.addAlgorithm(BoundariesLiOpenshaw())
         
+        #Smooth
+        self.addAlgorithm(GaussianSmoothing())
+        self.addAlgorithm(CatmullRomSmoothing())
+        self.addAlgorithm(ChaikinSmoothing())
+        self.addAlgorithm(SmoothPlatre())
+        self.addAlgorithm(SmoothSnake())
+        self.addAlgorithm(SmoothTaubin())
+        self.addAlgorithm(SmoothTopographic())
+        self.addAlgorithm(SmoothWMA())
+                
         self._algorithms_loaded = True
 
     def id(self):

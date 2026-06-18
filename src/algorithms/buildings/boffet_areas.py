@@ -113,6 +113,17 @@ class BoffetArea(QgsProcessingAlgorithm):
         """
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        description = self.tr("""
+            Calculate urban areas from buildings.
+        """)
+        return(description)
 
     def shortHelpString(self):
         """

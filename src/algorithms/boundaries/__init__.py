@@ -1,2 +1,1 @@
 from .administrative_boundaries import BoundariesDouglasPeucker, BoundariesLiOpenshaw, BoundariesRaposo, BoundariesVisvalingam
-from .skeletonize import SkelNatural, SkelArtificial, SkelNetwork

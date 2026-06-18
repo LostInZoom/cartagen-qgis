@@ -21,18 +21,6 @@ __copyright__ = '(C) 2024 by Guillaume Touya, Justin Berli & Paul Bourcier'
 
 __revision__ = '$Format:%H$'
 
-from qgis.core import (
-    QgsProject,
-    QgsVectorLayer,
-    QgsField,
-    QgsFeature,
-    QgsGeometry,
-    QgsFields,
-)
-from qgis.utils import iface
-from qgis.PyQt.QtCore import QVariant
-
-
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
     QgsProcessing, QgsFeatureSink, QgsProcessingAlgorithm,
@@ -47,9 +35,7 @@ from qgis.core import (
 
 import geopandas as gpd
 
-from cartagen import boundaries_douglas_peucker, boundaries_visvalingam_whyatt, boundaries_raposo, boundaries_li_openshaw
-
-from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
+from cartagen4qgis.src.tools import list_to_qgis_feature_2
 
 class BoundariesDouglasPeucker(QgsProcessingAlgorithm):
     """
@@ -116,7 +102,18 @@ class BoundariesDouglasPeucker(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Polygons'
+        return 'Boundaries'
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        description = self.tr("""
+            Applies the Douglas-Peucker-Ramer algorithm to the administrative boundaries of the polygons. 
+        """)
+        return(description)
 
     def shortHelpString(self):
         """
@@ -207,6 +204,10 @@ class BoundariesDouglasPeucker(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen import generalize_boundaries, simplify_douglas_peucker
+        import geopandas as gpd
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT, context)
         
@@ -218,7 +219,7 @@ class BoundariesDouglasPeucker(QgsProcessingAlgorithm):
         preserve_topology = self.parameterAsBoolean(parameters, self.PRESERVE_TOPOLOGY, context)
         
         # Actual algorithm
-        gdf_final = boundaries_douglas_peucker(gdf, threshold=distance_threshold, preserve_topology=preserve_topology)
+        gdf_final = generalize_boundaries(gdf, algorithm=simplify_douglas_peucker, threshold=distance_threshold, preserve_topology=preserve_topology)
         
         res = gdf_final.to_dict('records')
         res = list_to_qgis_feature_2(res, source.fields())
@@ -300,7 +301,18 @@ class BoundariesLiOpenshaw(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Polygons'
+        return 'Boundaries'
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        description = self.tr("""
+            Applies the Li-Openshaw algorithm to the administrative boundaries of the polygons. 
+        """)
+        return(description)
 
     def shortHelpString(self):
         """
@@ -381,7 +393,10 @@ class BoundariesLiOpenshaw(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
-        import datetime
+        from cartagen import generalize_boundaries, simplify_li_openshaw
+        import geopandas as gpd
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT, context)
         
@@ -392,7 +407,7 @@ class BoundariesLiOpenshaw(QgsProcessingAlgorithm):
         cell_size = self.parameterAsDouble(parameters, self.CELL_SIZE, context)
 
         # Actual algorithm
-        gdf_final = boundaries_li_openshaw(gdf, cell_size)
+        gdf_final = generalize_boundaries(gdf, algorithm=simplify_li_openshaw, cell_size=cell_size)
         
         # print("transformation en liste de dict" + str(datetime.datetime.now()))
         res = gdf_final.to_dict('records')
@@ -491,7 +506,18 @@ class BoundariesRaposo(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Polygons'
+        return 'Boundaries'
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        description = self.tr("""
+            Applies the Raposo algorithm to the administrative boundaries of the polygons. 
+        """)
+        return(description)
 
     def shortHelpString(self):
         """
@@ -600,6 +626,10 @@ class BoundariesRaposo(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen import generalize_boundaries, simplify_raposo
+        import geopandas as gpd
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT, context)
         
@@ -611,10 +641,10 @@ class BoundariesRaposo(QgsProcessingAlgorithm):
         final_scale = self.parameterAsInt(parameters, self.FINAL_SCALE, context)
         centroid = self.parameterAsBoolean(parameters, self.CENTROID, context)
         tobler = self.parameterAsBoolean(parameters, self.TOBLER, context)
-    
+
 
         # Actual algorithm
-        gdf_final = boundaries_raposo(gdf, initial_scale, final_scale, centroid, tobler)
+        gdf_final = generalize_boundaries(gdf, algorithm=simplify_raposo, initial_scale=initial_scale, final_scale=final_scale, centroid=centroid, tobler=tobler)
         
         res = gdf_final.to_dict('records')
         res = list_to_qgis_feature_2(res)
@@ -699,7 +729,18 @@ class BoundariesVisvalingam(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Polygons'
+        return 'Boundaries'
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        description = self.tr("""
+            Applies the Visvialingam-Whyatt algorithm to the administrative boundaries of the polygons. 
+        """)
+        return(description)
 
     def shortHelpString(self):
         """
@@ -777,6 +818,9 @@ class BoundariesVisvalingam(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen import generalize_boundaries, simplify_visvalingam_whyatt
+        import geopandas as gpd
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
         import datetime
         # Get the QGIS source from the parameters
         source = self.parameterAsSource(parameters, self.INPUT, context)
@@ -788,7 +832,7 @@ class BoundariesVisvalingam(QgsProcessingAlgorithm):
         area_tolerance = self.parameterAsDouble(parameters, self.AREA_TOLERANCE, context)
         
         # Actual algorithm
-        gdf_final = boundaries_visvalingam_whyatt(gdf, area_tolerance)
+        gdf_final = generalize_boundaries(gdf, algorithm=simplify_visvalingam_whyatt, area_tolerance=area_tolerance)
         res = gdf_final.to_dict('records')
         res = list_to_qgis_feature_2(res, source.fields())
      

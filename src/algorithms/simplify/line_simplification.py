@@ -39,20 +39,23 @@ from qgis.core import (
     QgsProcessingParameterMultipleLayers
 )
 
-class Angular(QgsProcessingAlgorithm):
+class SimplifyAngular (QgsProcessingAlgorithm):
     """
-    Simplify a line or polygon by removing vertexes with small angles.
+        Simplify a line or polygon by removing vertexes with small angles.
 
-    This algorithm, proposed by McMaster [1], eliminates vertices that represent very small turning angles (< 10 degrees). This prevents rounding filters from destroying sharp curvatures, granting the resulting geometry a ‘manually generalised’ characteristic where significant bends remain prominent.
+        This algorithm, proposed by McMaster [1], eliminates vertices that represent very small turning angles (< 10 degrees). This prevents rounding filters from destroying sharp curvatures, granting the resulting geometry a ‘manually generalised’ characteristic where significant bends remain prominent.
 
-    Accept Multi geometries. If a polygon is provided, it also applies the thinning to its holes using the same parameters.
+        Accept Multi geometries. If a polygon is provided, it also applies the thinning to its holes using the same parameters.
 
-    Parameters:
+        Parameters:
 
             geometry (LineString, MultiLineString, Polygon, MultiPolygon, LinearRing) – The geometry to thin. If an open line is provided, the endpoints are preserved. If a closed ring or polygon is provided, the angles wrap around.
 
             angle (float, optional) – Turning-angle threshold in degrees. Vertices creating an exterior angle below this limit will be iteratively removed. Default is 10.0.
 
+        Returns:
+
+        LineString, MultiLineString, Polygon, MultiPolygon, LinearRing - Thinned geometry of the same type as input.
     """
 
     # Constants used to refer to parameters and outputs. They will be
@@ -61,8 +64,8 @@ class Angular(QgsProcessingAlgorithm):
 
     OUTPUT = 'OUTPUT'
     INPUT = 'INPUT'
-    ANGLE = 'ANGLE'
- 
+    ANGLE='ANGLE'
+
     def name(self):
         """
         Returns the algorithm name, used for identifying the algorithm. This
@@ -95,7 +98,7 @@ class Angular(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Lines'
+        return 'Simplify lines and patches'
 
     def icon(self):
         """
@@ -105,42 +108,60 @@ class Angular(QgsProcessingAlgorithm):
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
 
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
+
     def shortHelpString(self):
         """
         Returns a localised short helper string for the algorithm. This string
         should provide a basic description about what the algorithm does and the
         parameters and outputs associated with it..
         """
-        return self.tr( f"""
+        helpstring = """
             Simplify a line or polygon by removing vertexes with small angles.
-            This algorithm, proposed by McMaster, eliminates vertices that represent very small turning angles (< 10 degrees). This prevents rounding filters from destroying sharp curvatures, granting the resulting geometry a ‘manually generalised’ characteristic where significant bends remain prominent.
-            Accept Multi geometries. If a polygon is provided, it also applies the thinning to its holes using the same parameters.
-            Parameter :
-            - Angle : Turning-angle threshold in degrees. Vertices creating an exterior angle below this limit will be iteratively removed. Default is 10.0.
-            Link to the doc :
-            https://cartagen.readthedocs.io/en/latest/reference/cartagen.simplify_angular.html#cartagen.simplify_angular"
-            """)
+            This algorithm, proposed by McMaster, eliminates vertices that represent very small turning angles (under 10 degrees). This prevents rounding filters from destroying sharp curvatures, granting the resulting geometry a ‘manually generalised’ characteristic where significant bends remain prominent. 
+            
+            <b> Accept Multi geometries. </b>
+            <b>If a polygon is provided, it also applies the thinning to its holes using the same parameters. </b>
+            
+            <h3> Parameters: </h3>
+            <ul>
+                <li> - <em>Angle </em> :  Turning-angle threshold in degrees. Vertices creating an exterior angle below this limit will be iteratively removed. Default is 10.0. </li>
+            </ul>
+
+            <img src="../illustration/simplify/angular.png"/>
+
+            For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.simplify_angular.html#cartagen.simplify_angular">help online</a>.
+        """
         
+        return self.tr(helpstring)
+    
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
 
     def createInstance(self):
-        return DouglasPeucker()
+        return SimplifyAngular()
 
     def initAlgorithm(self, config):
         """
         Here we define the inputs and output of the algorithm, along
         with some other properties.
-        """
-
+        """   
         # We add the input vector features source.
-        self.addParameter(
-            QgsProcessingParameterFeatureSource(
+        input = QgsProcessingParameterFeatureSource(
                 self.INPUT,
-                self.tr('Input lines or polygons :'),
-                [QgsProcessing.TypeVectorPolygon, QgsProcessing.TypeVectorLine]
+                self.tr('The geometry to thin :'),
+                [QgsProcessing.TypeVectorLine, QgsProcessing.TypeVectorPolygon]
             )
-        )
+        self.addParameter(input)
 
         angle = QgsProcessingParameterNumber(
             self.ANGLE,
@@ -150,16 +171,14 @@ class Angular(QgsProcessingAlgorithm):
             optional=False
         )
         self.addParameter(angle)
-       
+
         # We add a feature sink in which to store our processed features (this
         # usually takes the form of a newly created vector layer when the
-        # algorithm is run in QGIS).
-        self.addParameter(
-            QgsProcessingParameterFeatureSink(
+        # algorithm is run in QGIS).   
+        output = QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
-                self.tr('Simplified Angular')
-            )
-        )
+                self.tr('Simplified Angular'))
+        self.addParameter(output)
 
     def processAlgorithm(self, parameters, context, feedback):
         """
@@ -167,38 +186,44 @@ class Angular(QgsProcessingAlgorithm):
         """
         import geopandas as gpd
         from cartagen import simplify_angular
-        from shapely.wkt import loads
-        from cartagen4qgis.src.tools import qgis_source_to_geodataframe, list_to_qgis_feature_2
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsSource(parameters, self.INPUT, context)
-
         gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
         
-        # Retrieve the other parameter values 
+        # retrieve the other parameters values
         angle = self.parameterAsDouble(parameters, self.ANGLE, context)
 
-        # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
-        dp = gdf.copy()
-        for i in range(len(gdf)):
-            dp.loc[i,'geometry'] = simplify_angular(list(gdf.geometry)[i],angle=angle)
-            res = dp.to_dict('records')
-            res = list_to_qgis_feature_2(res, source.fields())
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        features = source.getFeatures()
+
+        for current, feature in enumerate(features):
+            #Using CartAGen algorithm and transforming the result to a list of QgsFeature()
+            #Depending on the type of geometry of the input data
+            dp = gdf.copy()
+            for i in range(len(gdf)):
+                dp.loc[i,'geometry'] = simplify_angular(list(gdf.geometry)[i], angle=angle)
+            
+                res = dp.to_dict('records')
+                res = list_to_qgis_feature_2(res,source.fields())
+                # Update the progress bar
+                feedback.setProgress(int(current * total))
 
         # Create the output sink    
-        (sink, dest_id) = self.parameterAsSink(
-            parameters, self.OUTPUT, context,
-            res[0].fields(), source.wkbType(), source.sourceCrs()
-        )
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                context, res[0].fields(), source.wkbType(), source.sourceCrs())
         
         # Add a feature in the sink
         sink.addFeatures(res, QgsFeatureSink.FastInsert)
 
         return {
             self.OUTPUT: dest_id
-        }
+            }
 
 class DouglasPeucker(QgsProcessingAlgorithm):
     """
@@ -266,7 +291,7 @@ class DouglasPeucker(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Lines'
+        return 'Simplify lines and patches'
 
     def icon(self):
         """
@@ -276,6 +301,17 @@ class DouglasPeucker(QgsProcessingAlgorithm):
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
 
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[2]
+        description = self.tr(first_line)
+        
+        return(description)
+
     def shortHelpString(self):
         """
         Returns a localised short helper string for the algorithm. This string
@@ -283,9 +319,12 @@ class DouglasPeucker(QgsProcessingAlgorithm):
         parameters and outputs associated with it..
         """
         return self.tr(f"""
+            <b> The process can be quite long with polygons </b>         
+            
             Simplify a line or polygon using a distance-based selection.
             This algorithm was proposed by Ramer and by Douglas and Peucker. It is a line filtering algorithm, which means that it filters the vertices of the line (or polygon) to only retain the most important ones to preserve the shape of the line. The algorithm iteratively searches the most characteristics vertices of portions of the line and decides to retain or remove them given a distance threshold.
-            The algorithm tends to unsmooth geographic lines, and is rarely used to simplify geographic features. But it can be very useful to quickly filter the vertices of a line inside another algorithm.
+            
+            <b>The algorithm tends to unsmooth geographic lines, and is rarely used to simplify geographic features. But it can be very useful to quickly filter the vertices of a line inside another algorithm.</b>
             
             <h3>Parameters :</h3>
             <ul>
@@ -349,6 +388,7 @@ class DouglasPeucker(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        from cartagen import simplify_douglas_peucker
         import geopandas as gpd
         from shapely.wkt import loads
         from cartagen4qgis.src.tools import qgis_source_to_geodataframe, list_to_qgis_feature_2
@@ -364,12 +404,22 @@ class DouglasPeucker(QgsProcessingAlgorithm):
         threshold = self.parameterAsDouble(parameters, self.THRESHOLD, context)
         preserve_topology = self.parameterAsBoolean(parameters, self.PRESERVE_TOPOLOGY, context)
 
-        # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
-        dp = gdf.copy()
-        for i in range(len(gdf)):
-            dp.loc[i,'geometry'] = simplify_douglas_peucker(list(gdf.geometry)[i],threshold=threshold, preserve_topology=preserve_topology)
-            res = dp.to_dict('records')
-            res = list_to_qgis_feature_2(res, source.fields())
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        features = source.getFeatures()
+
+        for current, feature in enumerate(features):
+            # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
+            dp = gdf.copy()
+            for i in range(len(gdf)):
+                dp.loc[i,'geometry'] = simplify_douglas_peucker(list(gdf.geometry)[i],threshold=threshold, preserve_topology=preserve_topology)
+                
+                res = dp.to_dict('records')
+                res = list_to_qgis_feature_2(res, source.fields())
+                
+                # Update the progress bar
+                feedback.setProgress(int(current * total))
 
 
         # Create the output sink    
@@ -451,7 +501,7 @@ class Lang(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Lines'
+        return 'Simplify lines and patches'
 
     def icon(self):
         """
@@ -460,6 +510,17 @@ class Lang(QgsProcessingAlgorithm):
         """
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
+    
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[4]
+        description = self.tr(first_line)
+        
+        return(description)
 
     def shortHelpString(self):
         """
@@ -468,10 +529,14 @@ class Lang(QgsProcessingAlgorithm):
         parameters and outputs associated with it..
         """
         return self.tr(f"""
+        <b>/!\ Doesn't work with multi-part geometry /!\</b>
+                       
+
         Simplify a line or polygon using a distance-based selection.
         This algorithm was proposed by Ramer and by Douglas and Peucker. It is a line filtering algorithm, which means that it filters the vertices of the line (or polygon) to only retain the most important ones to preserve the shape of the line. The algorithm iteratively searches the most characteristics vertices of portions of the line and decides to retain or remove them given a distance threshold.
         The algorithm tends to unsmooth geographic lines, and is rarely used to simplify geographic features. But it can be very useful to quickly filter the vertices of a line inside another algorithm.
-        This is a simple wrapper around shapely.simplify().
+        
+        <b> The process can be quite long with polygons </b>         
         <h3> Parameters:<h3>
         <ul>
             <li> - <em>Threshold</em> : The distance threshold to remove the vertex from the line.</li>
@@ -549,13 +614,20 @@ class Lang(QgsProcessingAlgorithm):
         tolerance = self.parameterAsDouble(parameters, self.TOLERANCE, context)
         look_ahead = self.parameterAsInt(parameters, self.LOOK_AHEAD, context)
 
-        # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
-        dp = gdf.copy()
-        for i in range(len(gdf)):
-            dp.loc[i,'geometry'] = simplify_lang(list(gdf.geometry)[i],tolerance=tolerance, look_ahead=look_ahead)
-            res = dp.to_dict('records')
-            res = list_to_qgis_feature_2(res, source.fields())
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        features = source.getFeatures()
 
+        for current, feature in enumerate(features):
+            # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
+            dp = gdf.copy()
+            for i in range(len(gdf)):
+                dp.loc[i,'geometry'] = simplify_lang(list(gdf.geometry)[i], tolerance=tolerance, look_ahead=look_ahead)
+                res = dp.to_dict('records')
+                res = list_to_qgis_feature_2(res, source.fields())
+                # Update the progress bar
+                feedback.setProgress(int(current * total))
 
         # Create the output sink    
         (sink, dest_id) = self.parameterAsSink(
@@ -630,7 +702,7 @@ class LiOpenshaw(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Lines'
+        return 'Simplify lines and patches'
 
     def icon(self):
         """
@@ -639,6 +711,17 @@ class LiOpenshaw(QgsProcessingAlgorithm):
         """
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
 
     def shortHelpString(self):
         """
@@ -728,13 +811,21 @@ class LiOpenshaw(QgsProcessingAlgorithm):
         cell_size = self.parameterAsDouble(parameters, self.CELL_SIZE, context)
         preserve_extremities = self.parameterAsBoolean(parameters, self.PRESERVE_EXTREMETIES, context)
 
-        # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
-        dp = gdf.copy()
-        for i in range(len(gdf)):
-            dp.loc[i,'geometry'] = simplify_li_openshaw(list(gdf.geometry)[i],cell_size=cell_size, preserve_extremities=preserve_extremities)
-            res = dp.to_dict('records')
-            res = list_to_qgis_feature_2(res, source.fields())
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        features = source.getFeatures()
 
+        for current, feature in enumerate(features):
+            # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
+            dp = gdf.copy()
+            for i in range(len(gdf)):
+                print(dp.loc[i,'geometry'])
+                dp.loc[i,'geometry'] = simplify_li_openshaw(list(gdf.geometry)[i],cell_size=cell_size, preserve_extremities=preserve_extremities)
+                res = dp.to_dict('records')
+                res = list_to_qgis_feature_2(res, source.fields())
+                # Update the progress bar
+                feedback.setProgress(int(current * total))
 
         # Create the output sink    
         (sink, dest_id) = self.parameterAsSink(
@@ -753,7 +844,7 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
     """
     Simplify a line or a polygon using an hexagonal tessellation.
 
-    This algorithm proposed by Raposo [1] simplifies lines based on a hexagonal tessellation. The algorithm also works for the simplification of the border of a polygon object. The idea of the algorithm is to put a hexagonal tessellation on top of the line to simplify, the size of the cells depending on the targeted granularity of the line. Similarly to the Li-Openshaw algorithm, only one vertex is kept inside each cell. This point can be the centroid of the removed vertices, or a projection on the initial line of this centroid. The shapes obtained with this algorithm are less sharp than the ones obtained with other algorithms such as Douglas-Peucker.
+    This algorithm proposed by Raposo simplifies lines based on a hexagonal tessellation. The algorithm also works for the simplification of the border of a polygon object. The idea of the algorithm is to put a hexagonal tessellation on top of the line to simplify, the size of the cells depending on the targeted granularity of the line. Similarly to the Li-Openshaw algorithm, only one vertex is kept inside each cell. This point can be the centroid of the removed vertices, or a projection on the initial line of this centroid. The shapes obtained with this algorithm are less sharp than the ones obtained with other algorithms such as Douglas-Peucker.
 
     The algorithm is dedicated to the smooth simplification of natural features such as rivers, forests, coastlines, lakes.
 
@@ -817,7 +908,7 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Lines'
+        return 'Simplify lines and patches'
 
     def icon(self):
         """
@@ -826,6 +917,17 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
         """
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
 
     def shortHelpString(self):
         """
@@ -840,11 +942,13 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
             
             <h3>Parameters:</h3>
             <ul>
-                <li>- Initial scale : Initial scale of the provided line (25000.0 for 1:25000 scale).</li>
-                <li>- Final scale : Final scale of the simplified line.</li>
-                <li>- Centroid : If True, uses the center of the hexagonal cells as the new vertex. If False, the center is projected on the nearest point in the initial line.</li>
-                <li>- Tobler : If True, compute cell resolution based on Tobler’s formula, else uses Raposo’s formula.</li>
+                <li>- <em>Initial scale</em> : Initial scale of the provided line (25000.0 for 1:25000 scale).</li>
+                <li>- <em>Final scale</em> : Final scale of the simplified line.</li>
+                <li>- <em>Centroid</em> : If True, uses the center of the hexagonal cells as the new vertex. If False, the center is projected on the nearest point in the initial line.</li>
+                <li>- <em>Tobler</em> : If True, compute cell resolution based on Tobler’s formula, else uses Raposo’s formula.</li>
             </ul>
+                       
+            For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.simplify_raposo.html#cartagen.simplify_raposo">help online</a>.
             """)   
 
     def tr(self, string):
@@ -864,7 +968,7 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr('Input lines or polygons :'),
-                [QgsProcessing.TypeVectorLine]
+                [QgsProcessing.TypeVectorLine, QgsProcessing.TypeVectorPolygon]
             )
         )
 
@@ -872,7 +976,7 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
                 self.INITIAL_SCALE,
                 self.tr('Initial scale :'),
                 type=QgsProcessingParameterNumber.Double,
-                defaultValue=5000,
+                defaultValue=25000,
                 optional=False
             )
         self.addParameter(initial_scale)
@@ -881,7 +985,7 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
                 self.FINAL_SCALE,
                 self.tr('Final scale :'),
                 type=QgsProcessingParameterNumber.Double,
-                defaultValue=10000,
+                defaultValue=50000,
                 optional=False
             )
         self.addParameter(final_scale)    
@@ -898,7 +1002,7 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
         tobler = QgsProcessingParameterBoolean(
                 self.TOBLER,
                 self.tr('Tobler ?'),
-                defaultValue=True,
+                defaultValue=False,
                 optional=False
             )
         tobler.setFlags(tobler.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
@@ -940,8 +1044,9 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
 
         if initial_scale == 0.0:
 
-            from qgis.PyQt.QtWidgets import QMessageBox
-            QMessageBox.warning(None, "Initial scale is null !", f"The Initial scale is equal to 0. The algorithm can't function.")
+            from qgis.core import QgsMessageLog, Qgis
+            feedback.pushInfo("ERROR WITH CARTAGEN :")
+            feedback.pushInfo(f"The Initial scale is equal to 0. The algorithm Simplify Raposo can't function.")
 
             from qgis.core import QgsWkbTypes
             feature = QgsFeature() #create a QgsFeature()
@@ -949,14 +1054,19 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
                     context, feature.fields(), QgsWkbTypes.Unknown, source.sourceCrs())
 
         else :
+            print("pas zero")
             
             for current, feature in enumerate(features):
                 # Stop the algorithm if cancel button has been clicked
                 if feedback.isCanceled():
                     break
+                
+                print(f"{current}.{feature}")
 
                 wkt = feature.geometry().asWkt()
                 shapely_geom = loads(wkt)
+
+                print(f"shapely_geom : {shapely_geom}")
 
                 simplified = simplify_raposo(shapely_geom, initial_scale=initial_scale, final_scale=final_scale, centroid=centroid, tobler=tobler)
 
@@ -1046,7 +1156,7 @@ class ReumannWitkam(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Lines'
+        return 'Simplify lines and patches'
 
     def icon(self):
         """
@@ -1056,6 +1166,17 @@ class ReumannWitkam(QgsProcessingAlgorithm):
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
 
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[2]
+        description = self.tr(first_line)
+        
+        return(description)
+
     def shortHelpString(self):
         """
         Returns a localised short helper string for the algorithm. This string
@@ -1063,10 +1184,14 @@ class ReumannWitkam(QgsProcessingAlgorithm):
         parameters and outputs associated with it..
         """
         return self.tr("""
+            <b>/!\ Doesn't work with multi-part geometry /!\</b>
+                       
             Simplify a line or polygon using a directional distance-based selection.
             This algorithm, proposed by Reumann and Witkam , performs a sequential line simplification by using a “corridor” or “tube” defined by the direction of the first segment. Unlike the Douglas-Peucker algorithm, which considers the line globally, Reumann-Witkam is a local, streaming-friendly filter that processes vertices in order.
             The principle of the algorithm is to define a search pipe using the first two points of a segment. For all subsequent points, the perpendicular distance to the infinite line passing through this initial segment is calculated. As long as the points stay within the tolerance distance, they are marked for deletion. When a point falls outside the pipe, the current point becomes the new starting vertex, and a new pipe direction is established.
             The algorithm is particularly efficient for reducing the density of points in datasets where the direction of the line is relatively constant, making it ideal for real-time thinning of trajectory data or GPS traces.
+            
+            <b> The process can be quite long with polygons. </b>
             <h3> Parameters: </h3>
                        
             <ul>
@@ -1100,6 +1225,7 @@ class ReumannWitkam(QgsProcessingAlgorithm):
             self.TOLERANCE,
             self.tr('Tolerance :'),
             type=QgsProcessingParameterNumber.Double,
+            defaultValue=10.0,
             optional=False
         )
         self.addParameter(tolerance)
@@ -1133,13 +1259,22 @@ class ReumannWitkam(QgsProcessingAlgorithm):
         # Retrieve the other parameter values 
         tolerance = self.parameterAsDouble(parameters, self.TOLERANCE, context)
 
-        # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
-        dp = gdf.copy()
-        for i in range(len(gdf)):
-            dp.loc[i,'geometry'] = simplify_reumann_witkam(list(gdf.geometry)[i],tolerance=tolerance)
-            res = dp.to_dict('records')
-            res = list_to_qgis_feature_2(res, source.fields())
 
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        features = source.getFeatures()
+
+        for current, feature in enumerate(features):
+            # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
+            dp = gdf.copy()
+            for i in range(len(gdf)):
+                print(f"i.{i}")
+                dp.loc[i,'geometry'] = simplify_reumann_witkam(list(gdf.geometry)[i],tolerance=tolerance)
+                res = dp.to_dict('records')
+                res = list_to_qgis_feature_2(res, source.fields())
+                # Update the progress bar
+                feedback.setProgress(int(current * total))
 
         # Create the output sink    
         (sink, dest_id) = self.parameterAsSink(
@@ -1154,7 +1289,6 @@ class ReumannWitkam(QgsProcessingAlgorithm):
             self.OUTPUT: dest_id
         }
     
-
 class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
     """
     Simplify a line or polygon using an area-based selection.
@@ -1196,7 +1330,7 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr('Input line or polygon :'),
-                [QgsProcessing.TypeVectorLine]
+                [QgsProcessing.TypeVectorLine, QgsProcessing.TypeVectorPolygon]
             )
         )
 
@@ -1328,7 +1462,7 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Lines'
+        return 'Simplify lines and patches'
 
     def icon(self):
         """
@@ -1344,6 +1478,17 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
     def createInstance(self):
         return VisvalingamWhyattQGIS()
 
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[2]
+        description = self.tr(first_line)
+        
+        return(description)
+
     def shortHelpString(self):
         """
         Returns a localised short helper string for the algorithm. This string
@@ -1351,9 +1496,12 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
         parameters and outputs associated with it..
         """
         helpstring = """ 
+            <b>/!\ Doesn't work with multi-part geometry /!\</b>
+
             Simplify a line or polygon using an area-based selection.
             This algorithm proposed by Visvalingam and Whyatt performs a line simplification that produces less angular results than the filtering algorithm of Ramer-Douglas-Peucker. The principle of the algorithm is to select the vertices to delete (the less characteristic ones) rather than choosing the vertices to keep (in the Douglas and Peucker algorithm). To select the vertices to delete, there is an iterative process, and at each iteration, the triangles formed by three consecutive vertices are computed. If the area of the smallest triangle is smaller than a threshold, the middle vertex is deleted, and another iteration starts.
-            The algorithm is relevant for the simplification of natural line or polygon features such as rivers, forests, or coastlines. This implementation was made by Elliot Hallmark.
+            This implementation was made by Elliot Hallmark.
+            <b> The algorithm is relevant for the simplification of natural line or polygon features such as rivers, forests, or coastlines. </b>
             <h3> Parameters: </h3>
             <ul>
                 <li> - <em>Methode</em> : Choose the methode used for the calcul :</li>
@@ -1362,10 +1510,190 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
                     . Ratio (float) : The ratio of points to keep (between 0 and 1). Example: 0.5 keeps approximately 50% of the original points.
                 <li> - <em>Value</em> : The value to use fot the calcul</li>
             </ul>
+
             For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.simplify_visvalingam_whyatt.html#cartagen.simplify_visvalingam_whyatt">help online</a>.
             """
         return self.tr(helpstring)
+
+class SimplifyWangMuller (QgsProcessingAlgorithm):
+    """
+            
+    Simplify a line or polygon using a bend-reduction method.
+
+    This algorithm proposed by Wang & Müller [1] analyses the bends (curves) of a line or polygon and reduces those whose size falls below a given diameter tolerance, emulating the decisions a cartographer would make when generalising a line by hand. Topology is preserved throughout, a bend is only reduced if doing so does not cause the resulting geometry to self-intersect, cross another feature, or violate sidedness constraints.
+
+    This is a translation to work outside QGIS of the reduce bend algorithm of the geo_sim_processing QGIS plugin.
+
+    Parameters:
+
+            geometry (LineString, MultiLineString, Polygon, MultiPolygon, LinearRing) – The geometry to simplify.
+
+            tolerance (float) – Theoretical diameter (in the coordinate reference system units) of a bend to remove. Bends whose adjusted area is smaller than the iso-perimetric equivalent of a circle with this diameter are candidates for reduction. A good rule of thumb for cartographic generalisation is to use 0.5 mm at the target map scale (e.g. tolerance = 25 for a 1:50 000 map in metres). Higher values = more aggressive simplification.
+
+    Returns:
+
+        LineString, MultiLineString, Polygon, MultiPolygon, LinearRing  Simplified geometry of the same type as the input.
+
+    """
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    OUTPUT = 'OUTPUT'
+    INPUT = 'INPUT'
+    TOLERANCE='TOLERANCE'
+
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Simplify Wang-Muller'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr(self.name())
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr(self.groupId())
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Simplify lines and patches'
+
+    def icon(self):
+        """
+        Should return a QIcon which is used for your provider inside
+        the Processing toolbox.
+        """
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
         
+        return(description)
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        helpstring = """
+        Simplify a line or polygon using a bend-reduction method.
+        This algorithm proposed by Wang & Müller analyses the bends (curves) of a line or polygon and reduces those whose size falls below a given diameter tolerance, emulating the decisions a cartographer would make when generalising a line by hand. Topology is preserved throughout, a bend is only reduced if doing so does not cause the resulting geometry to self-intersect, cross another feature, or violate sidedness constraints. 
+        This is a translation to work outside QGIS of the reduce bend algorithm of the geo_sim_processing QGIS plugin.
+        
+        <h3> Parameters: </h3>
+        <ul>
+          <li> - <em>Tolerance </em> :  Theoretical diameter (in the coordinate reference system units) of a bend to remove. Bends whose adjusted area is smaller than the iso-perimetric equivalent of a circle with this diameter are candidates for reduction. A good rule of thumb for cartographic generalisation is to use 0.5 mm at the target map scale (e.g. tolerance = 25 for a 1:50 000 map in metres). Higher values = more aggressive simplification. </li>
+        </ul>
+        For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.simplify_wang_muller.html#cartagen.simplify_wang_muller">help online</a>. 
+        """
+        
+        return self.tr(helpstring)
+    
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return SimplifyWangMuller()
+
+    def initAlgorithm(self, config):
+        """
+        Here we define the inputs and output of the algorithm, along
+        with some other properties.
+        """
+
+        # We add the input vector features source.
+        input = QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                self.tr('The geometry to simplify :'),
+                [QgsProcessing.TypeVectorLine, QgsProcessing.TypeVectorPolygon]
+            )
+        self.addParameter(input)
+
+        tolerance = QgsProcessingParameterNumber(
+            self.TOLERANCE,
+            self.tr('Tolerance :'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=25,
+            optional=False
+        )
+        self.addParameter(tolerance)
+            
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).   
+        output = QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Simplified Wang-Muller'))
+        self.addParameter(output)
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """
+        import geopandas as gpd
+        import pandas
+        from cartagen import simplify_wang_muller
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
+        
+        # retrieve the other parameters values
+        tolerance = self.parameterAsDouble(parameters, self.TOLERANCE, context)
+            
+        #Using CartAGen algorithm and transforming the result to a list of QgsFeature()
+        #Depending on the type of geometry of the input data
+
+        dp = gdf.copy()
+        for i in range(len(gdf)):
+            dp.loc[i,'geometry'] = simplify_wang_muller(list(gdf.geometry)[i], tolerance=tolerance)
+            res = dp.to_dict('records')
+            res = list_to_qgis_feature_2(res,source.fields())
+
+        # Create the output sink    
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        
+        # Add a feature in the sink
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+        
+        return {
+            self.OUTPUT: dest_id
+            }
+
+
+
 class Whirlpool(QgsProcessingAlgorithm):
 
     """
@@ -1389,9 +1717,7 @@ class Whirlpool(QgsProcessingAlgorithm):
     # calling from the QGIS console.
 
     OUTPUT = 'OUTPUT'
-    
     INPUT = 'INPUT'
-
     THRESHOLD = 'THRESHOLD'
  
     def name(self):
@@ -1426,7 +1752,7 @@ class Whirlpool(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Lines'
+        return 'Simplify lines and patches'
 
     def icon(self):
         """
@@ -1435,6 +1761,17 @@ class Whirlpool(QgsProcessingAlgorithm):
         """
         from cartagen4qgis import get_plugin_icon
         return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
 
     def shortHelpString(self):
         """
@@ -1480,6 +1817,7 @@ class Whirlpool(QgsProcessingAlgorithm):
             self.THRESHOLD,
             self.tr('Thresold :'),
             type=QgsProcessingParameterNumber.Double,
+            defaultValue=5,
             optional=False
         )
         self.addParameter(threshold)
@@ -1512,13 +1850,22 @@ class Whirlpool(QgsProcessingAlgorithm):
         
         # Retrieve the other parameter values 
         threshold = self.parameterAsDouble(parameters, self.THRESHOLD, context)
+        
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        features = source.getFeatures()
 
+        for current, feature in enumerate(features):
         # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
-        dp = gdf.copy()
-        for i in range(len(gdf)):
-            dp.loc[i,'geometry'] = simplify_whirlpool(list(gdf.geometry)[i],threshold=threshold)
-            res = dp.to_dict('records')
-            res = list_to_qgis_feature_2(res, source.fields())
+            dp = gdf.copy()
+            for i in range(len(gdf)):
+                print(f"{i}.{dp.loc[i,'geometry']}")
+                dp.loc[i,'geometry'] = simplify_whirlpool(list(gdf.geometry)[i],threshold=threshold)
+                res = dp.to_dict('records')
+                res = list_to_qgis_feature_2(res, source.fields())
+                # Update the progress bar
+                feedback.setProgress(int(current * total))
 
         # Create the output sink    
         (sink, dest_id) = self.parameterAsSink(

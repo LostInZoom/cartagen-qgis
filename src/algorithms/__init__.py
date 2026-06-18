@@ -1,7 +1,10 @@
+# from .boundaries import *
+from .boundaries import *
 from .buildings import *
-from .lines import *
-from .tools import *
-from .general import *
+from .processes import *
 from .network import *
 from .points import *
-from .polygons import *
+from .simplify import *
+from .skeletonize_spinalize import *
+from .smooth import *
+from .partitioning import *
