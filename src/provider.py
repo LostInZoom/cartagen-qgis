@@ -135,7 +135,7 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
             SmoothWMA,
 
             #Tools
-            InflexionPoints,
+            #InflexionPoints,
             MakePlanar,
             NetworkFacesQGIS,
             StrokesRoads,
