@@ -30,14 +30,12 @@ from qgis.core import (
 from qgis.core import (
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterFeatureSink,
-    QgsProcessingParameterBoolean,
     QgsProcessingParameterNumber,
-    QgsProcessingParameterDistance,
     QgsProcessingParameterField
 )
 from qgis.PyQt.QtCore import QVariant
 
-class BuildStrokes(QgsProcessingAlgorithm):
+class StrokesRoads(QgsProcessingAlgorithm):
     """
     This method computes the strokes in a Strokenetwork using a loop on network features, and updates its strokes attribute.
 
@@ -79,6 +77,17 @@ class BuildStrokes(QgsProcessingAlgorithm):
             )
         )
         
+        attributes_names = QgsProcessingParameterField(
+            self.ATTRIBUTES_NAMES,
+            self.tr('Attributes to be used as a criteria for continuity :'),
+            None,
+            'INPUT', 
+            QgsProcessingParameterField.Any,
+            True,
+            optional = True
+        )
+        self.addParameter(attributes_names)
+
         deviat_angle = QgsProcessingParameterNumber(
             self.DEVIAT_ANGLE,
             self.tr('Maximum angle between two segments at a junction :'),
@@ -99,9 +108,6 @@ class BuildStrokes(QgsProcessingAlgorithm):
         deviat_sum.setFlags(deviat_sum.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
         self.addParameter(deviat_sum)
 
-        self.addParameter(QgsProcessingParameterField(self.ATTRIBUTES_NAMES,
-            self.tr('Attributes to be used as a criteria for continuity'),
-            None, 'INPUT', QgsProcessingParameterField.Any, True, optional = True))
 
         # We add a feature sink in which to store our processed features (this
         # usually takes the form of a newly created vector layer when the
@@ -169,7 +175,7 @@ class BuildStrokes(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Build stroke network'
+        return 'Build Strokes Roads'
 
     def displayName(self):
         """
@@ -193,7 +199,7 @@ class BuildStrokes(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Network'
+        return 'Tools'
 
     def shortDescription(self):
         """
@@ -240,5 +246,218 @@ class BuildStrokes(QgsProcessingAlgorithm):
         return QCoreApplication.translate('Processing', string)
 
     def createInstance(self):
-        return BuildStrokes()
+        return StrokesRoads()
 
+class BuildStrokesRivers (QgsProcessingAlgorithm):
+
+    """ 
+    Calculate strokes inside a river network.
+
+    This algorithm is based on the ‘Good Continuation’ principle as defined by Thomson & Richardson. It defines strokes, which are segments that follow this perceptual grouping also known as Gestalt’s principle.
+
+    Parameters:
+
+            roads (GeoDataFrame of LineString) – The roads to calculate the strokes from.
+
+            attribute (str) – The attribute to help the derivation of continuity.
+
+            angle (float, optional) – Thresholds for the maximum angle between two segments at the junction of two sections belonging to the same stroke.
+
+            angle_sum (float, optional) – Thresholds for the maximum angle between two sections belonging to the same stroke.
+
+    Returns:
+
+        GeoDataFrame of LineString
+
+    """
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    OUTPUT = 'OUTPUT'
+    INPUT = 'INPUT'
+    ATTRIBUTE='ATTRIBUTE'
+    ANGLE='ANGLE'
+    ANGLE_SUM='ANGLE_SUM'
+
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Build Strokes Rivers'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr(self.name())
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr(self.groupId())
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Tools'
+
+    def icon(self):
+        """
+        Should return a QIcon which is used for your provider inside
+        the Processing toolbox.
+        """
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[2]
+        description = self.tr(first_line)
+        
+        return(description)
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        helpstring = """
+        <b>/!\ Doesn't work with multipart geometry /!\</b>
+        
+        Calculate strokes inside a river network.
+        This algorithm is based on the ‘Good Continuation’ principle as defined by Thomson & Richardson. It defines strokes, which are segments that follow this perceptual grouping also known as Gestalt’s principle.
+        <h3> Parameters: </h3>
+        <ul>
+          <li> - <em>Attribute </em> :  The attribute to help the derivation of continuity. </li>
+          <li> - <em>Angle </em> :  Thresholds for the maximum angle between two segments at the junction of two sections belonging to the same stroke. </li>
+          <li> - <em>Angle Sum </em> :  Thresholds for the maximum angle between two sections belonging to the same stroke. </li>
+        </ul>
+        
+        For more see <a href="https://cartagen.readthedocs.io/en/main/reference/cartagen.strokes_rivers.html#cartagen.strokes_rivers">help online</a>.
+            
+        """
+        
+        return self.tr(helpstring)
+    
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return BuildStrokesRivers()
+
+    def initAlgorithm(self, config):
+        """
+        Here we define the inputs and output of the algorithm, along
+        with some other properties.
+        """
+                
+        # We add the input vector features source.
+        input = QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                self.tr('The roads to calculate the strokes from :'),
+                [QgsProcessing.TypeVectorLine]
+            )
+        self.addParameter(input)  
+            
+        angle = QgsProcessingParameterNumber(
+            self.ANGLE,
+            self.tr('Angle :'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=45
+        )
+        self.addParameter(angle)
+        
+        angle_sum = QgsProcessingParameterNumber(
+            self.ANGLE_SUM,
+            self.tr('Angle Sum :'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=30
+        )
+        self.addParameter(angle_sum)
+        
+        attribute = QgsProcessingParameterField(
+            self.ATTRIBUTE,
+            self.tr('Attribute :'),
+            defaultValue=None,
+            parentLayerParameterName='INPUT', 
+            type=QgsProcessingParameterField.Any,
+            allowMultiple=False,
+            optional=True
+        )
+        self.addParameter(attribute)
+        
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).   
+        output = QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Strokes rivers'))
+        self.addParameter(output)
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """
+        import geopandas as gpd
+        import pandas
+        from cartagen import strokes_rivers
+        from cartagen4qgis.src.tools import list_to_qgis_feature
+
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
+        
+        # retrieve the other parameters values
+
+        attribute = self.parameterAsFields(parameters, self.ATTRIBUTE, context)
+        angle = self.parameterAsDouble(parameters, self.ANGLE, context)
+        angle_sum = self.parameterAsDouble(parameters, self.ANGLE_SUM, context)
+
+        feedback.setProgress(10)
+
+        dp = gdf.copy()
+        if attribute :
+            dp = strokes_rivers(gdf, attribute=attribute[0], angle=angle, angle_sum=angle_sum)
+            feedback.setProgress(75)
+
+        else:
+            dp = strokes_rivers(gdf, angle=angle, angle_sum=angle_sum)
+            feedback.setProgress(75)
+
+
+        res = dp.to_dict('records')
+        res = list_to_qgis_feature(res)
+
+        feedback.setProgress(95)
+
+        # Create the output sink    
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        
+        # Add a feature in the sink
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+        
+        return {
+            self.OUTPUT: dest_id
+            }

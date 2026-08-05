@@ -178,7 +178,8 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
             <li> - <em>Middle_angle_tolerance</em> : if allow_middle_node is set to True, indicate an angle tolerance in degree for the fourth node of the crossroad to be considered the middle node.</li>
             <li> - <em>Allow_single_4degree_node</em> : if set to True, allow one and only one node to have a degree of 4.</li>
         </ul>
-        For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.detect_branching_crossroads.html#cartagen.detect_branching_crossroads">help online</a>.'
+
+        For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.detect_branching_crossroads.html#cartagen.detect_branching_crossroads">help online</a>.
         """
         return self.tr(helpstring)
         
@@ -255,7 +256,7 @@ class DetectBranchingCrossroads(QgsProcessingAlgorithm):
 
         allow_single_4degree_node = QgsProcessingParameterBoolean(
             self.ALLOW_SINGLE_4DEGREE_NODE,
-                self.tr('Allow single 4degree node'),
+                self.tr('Allow single 4degree node ?'),
                 optional=True,
                 defaultValue=True
             )
@@ -416,7 +417,7 @@ class CollapseBranchingCrossroads(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Collapse branching crossroads'
+        return 'Collapse Branching Crossroads'
 
     def displayName(self):
         """

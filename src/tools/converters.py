@@ -130,6 +130,6 @@ def list_to_qgis_feature_2(dicts,fields):
             else:
                 feature.setAttribute(fields[i].name(), None) #else set None
         feature.setGeometry(QgsGeometry.fromWkt(d['geometry'].wkt))
-        features.append(feature)  
+        features.append(feature)
 
     return features

@@ -1334,7 +1334,7 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
             )
         )
 
-        methodes = ['Thresold', 'Number', 'Ratio']
+        methodes = ['Threshold', 'Number', 'Ratio']
         methode = QgsProcessingParameterEnum(
                 self.METHOD,
                 'Select a method :',

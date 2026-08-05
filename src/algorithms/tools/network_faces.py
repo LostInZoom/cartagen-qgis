@@ -149,7 +149,7 @@ class NetworkFacesQGIS(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Partitioning'
+        return 'Tools'
 
     def shortDescription(self):
         """

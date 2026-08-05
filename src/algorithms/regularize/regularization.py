@@ -99,7 +99,7 @@ class BuildingFER (QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Buildings'
+        return 'Regularize buildings'
     
     def group(self):
         """
@@ -291,7 +291,7 @@ class BuildingRectangle(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Buildings'
+        return 'Regularize buildings'
     
     def group(self):
         """
@@ -478,7 +478,7 @@ class BuildingRegression(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Buildings'
+        return 'Regularize buildings'
     
     def group(self):
         """

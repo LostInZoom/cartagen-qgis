@@ -214,7 +214,7 @@ class DetectRoundaboutsQGIS(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Detect roundabouts'
+        return 'Detect Roundabouts'
 
     def displayName(self):
         """
@@ -449,7 +449,7 @@ class CollapseRoundaboutsQGIS(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Collapse roundabouts'
+        return 'Collapse Roundabouts'
 
     def displayName(self):
         """

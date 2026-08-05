@@ -35,7 +35,184 @@ from qgis.core import (
 
 import geopandas as gpd
 
-from cartagen4qgis.src.tools import list_to_qgis_feature_2
+class BoundariesAngular (QgsProcessingAlgorithm):
+    
+    """    
+Applies the simplify angular to the boundaries of a polygon.
+
+This algorithm, proposed by McMaster, eliminates vertices that represent very small turning angles (< 10 degrees). This prevents rounding filters from destroying sharp curvatures, granting the resulting geometry a "manually generalised" characteristic where significant bends remain prominent.
+
+Accept Multi geometries. If a polygon is provided, it also applies the thinning to its holes using the same parameters.
+
+Parameters:
+
+        geometry (LineString, MultiLineString, Polygon, MultiPolygon, LinearRing) – The geometry to thin. If an open line is provided, the endpoints are preserved. If a closed ring or polygon is provided, the angles wrap around.
+
+        angle (float, optional) – Turning-angle threshold in degrees. Vertices creating an exterior angle below this limit will be iteratively removed. Default is 10.0.
+
+Returns:
+
+    LineString, MultiLineString, Polygon, MultiPolygon, LinearRing : Thinned geometry of the same type as input.
+    """
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    OUTPUT='OUTPUT'
+    INPUT='INPUT'
+    ANGLE='ANGLE'
+
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Boundaries Angular'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr(self.name())
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr(self.groupId())
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Boundaries'
+
+    def icon(self):
+        """
+        Should return a QIcon which is used for your provider inside
+        the Processing toolbox.
+        """
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        helpstring = """
+        
+        Applies simplify_angular to the boundaries of a polygon.
+        This algorithm, proposed by McMaster, eliminates vertices that represent very small turning angles (< 10 degrees). This prevents rounding filters from destroying sharp curvatures, granting the resulting geometry a "manually generalised" characteristic where significant bends remain prominent. Accept Multi geometries. If a polygon is provided, it also applies the thinning to its holes using the same parameters.
+        <h3> Parameters: </h3>
+        <ul>
+            <li> - <em>Angle </em> :  Turning-angle threshold in degrees. Vertices creating an exterior angle below this limit will be iteratively removed. Default is 10.0. </li>
+        </ul>
+        For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.generalize_boundaries.html#cartagen.generalize_boundaries">help online</a>.
+            
+        """
+        
+        return self.tr(helpstring)
+    
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return BoundariesAngular()
+
+    def initAlgorithm(self, config):
+        """
+        Here we define the inputs and output of the algorithm, along
+        with some other properties.
+        """
+                
+        # We add the input vector features source.
+        input = QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                self.tr('The input layer containing adjacent polygons to be generalized :'),
+                [QgsProcessing.TypeVectorLine,QgsProcessing.TypeVectorPolygon]
+            )
+        self.addParameter(input)
+        
+        angle = QgsProcessingParameterNumber(
+            self.ANGLE,
+            self.tr('Angle :'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=10,
+            optional=False
+        )
+        self.addParameter(angle)
+        
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).   
+        output = QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Simplified Angular Boundaries'))
+        self.addParameter(output)
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """
+        import geopandas as gpd
+        import pandas
+        from cartagen import generalize_boundaries, simplify_angular
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
+        
+        # retrieve the other parameters values
+
+        angle = self.parameterAsDouble(parameters, self.ANGLE, context)
+            
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        features = source.getFeatures()
+
+        # Actual algorithm
+        gdf_final = generalize_boundaries(gdf, algorithm=simplify_angular, angle=angle)
+        
+        res = gdf_final.to_dict('records')
+        res = list_to_qgis_feature_2(res, source.fields())
+
+        # Create the output sink    
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        
+        # Add a feature in the sink
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+        
+        return {
+            self.OUTPUT: dest_id
+            }
 
 class BoundariesDouglasPeucker(QgsProcessingAlgorithm):
     """
@@ -124,8 +301,7 @@ class BoundariesDouglasPeucker(QgsProcessingAlgorithm):
         helpstring = """
             <b> /!\ Doesn't function with multipart geometry /!\ </b>
 
-            Applies the Douglas-Peucker-Ramer algorithm to the boundaries of the polygons. 
-            As most polygons share their boundaries with another polygon, the simplification is only applied to the common line, so that no topological disconnection is created between adjacent polygons.
++            As most polygons share their boundaries with another polygon, the simplification is only applied to the common line, so that no topological disconnection is created between adjacent polygons.
             
             <b> Works best with administrative boundaries. </b>
             
@@ -135,7 +311,7 @@ class BoundariesDouglasPeucker(QgsProcessingAlgorithm):
                 <li> - <em>Preserve Topology</em> : If set to True, the algorithm will prevent invalid geometries from being created (checking for collapses, ring-intersections, etc). The trade-off is computational expensivity.</li>
             </ul>
 
-            For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.boundaries_douglas_peucker.html#cartagen.boundaries_douglas_peucker">help online</a>.
+            For more see <a href="https://cartagen.readthedocs.io/en/main/reference/cartagen.generalize_boundaries.html#cartagen.generalize_boundaries">help online</a>.
         """
 
         return self.tr(helpstring)
@@ -167,7 +343,7 @@ class BoundariesDouglasPeucker(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
-                self.tr('Input polygons to simplify :'),
+                self.tr('The input layer containing adjacent polygons to be generalized :'),
                 [QgsProcessing.TypeVectorPolygon]
             )
         )
@@ -238,6 +414,201 @@ class BoundariesDouglasPeucker(QgsProcessingAlgorithm):
         return {
                 self.OUTPUT: dest_id
             }
+
+class BoundariesLang (QgsProcessingAlgorithm):
+    """
+            
+Simplify a line or polygon using a look-ahead distance-based selection.
+
+This algorithm, proposed by Lang, performs a simplification by defining a search region of a fixed number of vertices (look-ahead). It serves as a middle ground between local sequential filters and global algorithms like Douglas-Peucker.
+
+The principle of the algorithm is to create a segment between the current vertex and a vertex further down the line. The perpendicular distances from all intermediate vertices to this segment are calculated. If any distance exceeds the tolerance, the search region is shrunk by moving the end vertex one step closer to the start, and the process repeats until all intermediate points fall within the tolerance. Once a valid segment is found, all intermediate points are removed, and the process restarts from the end of that segment.
+
+Parameters:
+
+        geometry (LineString, MultiLineString, Polygon, MultiPolygon, LinearRing) – The geometry to simplify.
+
+        tolerance (float) – The maximum allowed perpendicular distance between the original vertices and the simplified segment.
+
+        look_ahead (int, optional) – The maximum number of vertices to consider in a single search window. Higher values allow for more aggressive simplification but increase computational cost.
+
+Returns:
+
+    LineString, MultiLineString, Polygon, MultiPolygon, LinearRing
+
+
+    """
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    OUTPUT='OUTPUT'
+    INPUT='INPUT'
+    TOLERANCE='TOLERANCE'
+    LOOK_AHEAD='LOOK_AHEAD'
+
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Boundaries Lang'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr(self.name())
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr(self.groupId())
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Boundaries'
+
+    def icon(self):
+        """
+        Should return a QIcon which is used for your provider inside
+        the Processing toolbox.
+        """
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        helpstring = """
+        Applies the Lang algorithm to the boundaries of the polygons. 
+        This algorithm, proposed by Lang, performs a simplification by defining a search region of a fixed number of vertices (look-ahead). It serves as a middle ground between local sequential filters and global algorithms like Douglas-Peucker. The principle of the algorithm is to create a segment between the current vertex and a vertex further down the line. The perpendicular distances from all intermediate vertices to this segment are calculated. If any distance exceeds the tolerance, the search region is shrunk by moving the end vertex one step closer to the start, and the process repeats until all intermediate points fall within the tolerance. Once a valid segment is found, all intermediate points are removed, and the process restarts from the end of that segment.
+        <h3> Parameters: </h3>
+        <ul>
+          <li> - <em>Tolerance </em> :  The maximum allowed perpendicular distance between the original vertices and the simplified segment. </li>
+          <li> - <em>Look ahead </em> :  The maximum number of vertices to consider in a single search window. Higher values allow for more aggressive simplification but increase computational cost. </li>
+        </ul>
+        For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.generalize_boundaries.html#cartagen.generalize_boundaries">help online</a>.
+            
+        """
+        
+        return self.tr(helpstring)
+    
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return BoundariesLang()
+
+    def initAlgorithm(self, config):
+        """
+        Here we define the inputs and output of the algorithm, along
+        with some other properties.
+        """
+                
+        # We add the input vector features source.
+        input = QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                self.tr('The input layer containing adjacent polygons to be generalized :'),
+                [QgsProcessing.TypeVectorLine,QgsProcessing.TypeVectorPolygon]
+            )
+        self.addParameter(input)
+        
+        tolerance = QgsProcessingParameterNumber(
+            self.TOLERANCE,
+            self.tr('Tolerance :'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=1,
+            optional=False
+        )
+        self.addParameter(tolerance)
+        
+        look_ahead = QgsProcessingParameterNumber(
+            self.LOOK_AHEAD,
+            self.tr('Look ahead :'),
+            type=QgsProcessingParameterNumber.Integer,
+            defaultValue=5,
+            optional=False
+        )
+        self.addParameter(look_ahead)
+            
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).   
+        output = QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Simplified Lang Boundaries'))
+        self.addParameter(output)
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """
+        import geopandas as gpd
+        import pandas
+        from cartagen import simplify_lang, generalize_boundaries
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
+        
+        # retrieve the other parameters values
+
+        tolerance = self.parameterAsDouble(parameters, self.TOLERANCE, context)
+        look_ahead = self.parameterAsInt(parameters, self.LOOK_AHEAD, context)
+        
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        features = source.getFeatures()
+
+        # Actual algorithm
+        gdf_final = generalize_boundaries(gdf, algorithm=simplify_lang, tolerance=tolerance, look_ahead=look_ahead)
+        
+        res = gdf_final.to_dict('records')
+        res = list_to_qgis_feature_2(res, source.fields())
+
+        # Create the output sink    
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        
+        # Add a feature in the sink
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+        
+        return {
+            self.OUTPUT: dest_id
+            }
+
 
 class BoundariesLiOpenshaw(QgsProcessingAlgorithm):
     """
@@ -334,7 +705,7 @@ class BoundariesLiOpenshaw(QgsProcessingAlgorithm):
                 <li> - <em>Cell size</em> : the size of the regular grid used to divide the line.</li>
             </ul>
 
-            For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.boundaries_li_openshaw.html#cartagen.boundaries_li_openshaw">help online</a>.
+            For more see <a href="https://cartagen.readthedocs.io/en/main/reference/cartagen.generalize_boundaries.html#cartagen.generalize_boundaries">help online</a>.
         """
 
         return self.tr(helpstring)
@@ -366,7 +737,7 @@ class BoundariesLiOpenshaw(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
-                self.tr('Input polygons to simplify :'),
+                self.tr('The input layer containing adjacent polygons to be generalized :'),
                 [QgsProcessing.TypeVectorPolygon]
             )
         )
@@ -541,7 +912,7 @@ class BoundariesRaposo(QgsProcessingAlgorithm):
                 <li> - <em>Tobler</em> : if True, compute cell resolution based on Tobler's formula, else uses Raposo's formula</li>
             </ul>
 
-            For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.boundaries_raposo.html#cartagen.boundaries_raposo">help online</a>.
+            For more see <a href="https://cartagen.readthedocs.io/en/main/reference/cartagen.generalize_boundaries.html#cartagen.generalize_boundaries">help online</a>.
         """
 
         return self.tr(helpstring)
@@ -573,7 +944,7 @@ class BoundariesRaposo(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
-                self.tr('Input polygons to simplify :'),
+                self.tr('The input layer containing adjacent polygons to be generalized :'),
                 [QgsProcessing.TypeVectorPolygon]
             )
         )
@@ -664,6 +1035,187 @@ class BoundariesRaposo(QgsProcessingAlgorithm):
                 self.OUTPUT: dest_id
             }
         
+
+class BoundariesReumannWitkam (QgsProcessingAlgorithm):
+    """
+            
+    Applies the Reumann-Witkam algorithm to the boundaries of the polygons. 
+
+    This algorithm, proposed by Reumann and Witkam, performs a sequential line simplification by using a “corridor” or “tube” defined by the direction of the first segment. Unlike the Douglas-Peucker algorithm, which considers the line globally, Reumann-Witkam is a local, streaming-friendly filter that processes vertices in order.
+
+    The principle of the algorithm is to define a search pipe using the first two points of a segment. For all subsequent points, the perpendicular distance to the infinite line passing through this initial segment is calculated. As long as the points stay within the tolerance distance, they are marked for deletion. When a point falls outside the pipe, the current point becomes the new starting vertex, and a new pipe direction is established.
+
+    The algorithm is particularly efficient for reducing the density of points in datasets where the direction of the line is relatively constant, making it ideal for real-time thinning of trajectory data or GPS traces.
+
+    Parameters:
+
+            geometry (LineString, MultiLineString, Polygon, MultiPolygon, LinearRing) – The geometry to simplify.
+
+            tolerance (float) – The width (radius) of the search corridor. Points within this distance from the segment’s trajectory are removed. Higher values = fewer points kept (more aggressive simplification).
+
+    Returns:
+
+        LineString, MultiLineString, Polygon, MultiPolygon, LinearRing
+
+    """
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    OUTPUT='OUTPUT'
+    INPUT='INPUT'
+    TOLERANCE='TOLERANCE'
+
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Boundaries Reumann-Witkam'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr(self.name())
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr(self.groupId())
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Boundaries'
+
+    def icon(self):
+        """
+        Should return a QIcon which is used for your provider inside
+        the Processing toolbox.
+        """
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        helpstring = """
+        Applies the Reumann-Witkam algorithm to the boundaries of the polygons.
+        This algorithm, proposed by Reumann and Witkam, performs a sequential line simplification by using a “corridor” or “tube” defined by the direction of the first segment. Unlike the Douglas-Peucker algorithm, which considers the line globally, Reumann-Witkam is a local, streaming-friendly filter that processes vertices in order. The principle of the algorithm is to define a search pipe using the first two points of a segment. For all subsequent points, the perpendicular distance to the infinite line passing through this initial segment is calculated. As long as the points stay within the tolerance distance, they are marked for deletion. When a point falls outside the pipe, the current point becomes the new starting vertex, and a new pipe direction is established. The algorithm is particularly efficient for reducing the density of points in datasets where the direction of the line is relatively constant, making it ideal for real-time thinning of trajectory data or GPS traces.
+        <h3> Parameters: </h3>
+        <ul>
+            <li> - <em>Tolerance </em> :  The width (radius) of the search corridor. Points within this distance from the segment’s trajectory are removed. Higher values = fewer points kept (more aggressive simplification). </li>
+        </ul>
+
+        For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.generalize_boundaries.html#cartagen.generalize_boundaries">help online</a>.
+        """
+        
+        return self.tr(helpstring)
+    
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return BoundariesReumannWitkam()
+
+    def initAlgorithm(self, config):
+        """
+        Here we define the inputs and output of the algorithm, along
+        with some other properties.
+        """
+                
+        # We add the input vector features source.
+        input = QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                self.tr('The input layer containing adjacent polygons to be generalized :'),
+                [QgsProcessing.TypeVectorLine,QgsProcessing.TypeVectorPolygon]
+            )
+        self.addParameter(input)
+        
+        tolerance = QgsProcessingParameterNumber(
+            self.TOLERANCE,
+            self.tr('Tolerance :'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=1,
+            optional=False
+        )
+        self.addParameter(tolerance)
+        
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).   
+        output = QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Simplified Reumann-Witkam Boundaries'))
+        self.addParameter(output)
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """
+        import geopandas as gpd
+        import pandas
+        from cartagen import simplify_reumann_witkam, generalize_boundaries
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
+        
+        # retrieve the other parameters values
+
+        tolerance = self.parameterAsDouble(parameters, self.TOLERANCE, context)
+        
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        features = source.getFeatures()
+
+        # Actual algorithm
+        gdf_final = generalize_boundaries(gdf, algorithm=simplify_reumann_witkam, tolerance=tolerance)
+        res = gdf_final.to_dict('records')
+        res = list_to_qgis_feature_2(res, source.fields())
+
+        # Create the output sink    
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        
+        # Add a feature in the sink
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+        
+        return {
+            self.OUTPUT: dest_id
+            }
+
 class BoundariesVisvalingam(QgsProcessingAlgorithm):
     """
     Applies the Visvialingam-Whyatt algorithm to the boundaries of the polygons. As most polygons share their boundaries 
@@ -761,7 +1313,7 @@ class BoundariesVisvalingam(QgsProcessingAlgorithm):
                 <li> - <em>Area tolerance</em> : the minimum triangle area to keep a vertex in the line.</li>
             </ul>
             
-            For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.boundaries_visvalingam_whyatt.html#cartagen.boundaries_visvalingam_whyatt">help online</a>.
+            For more see <a href="https://cartagen.readthedocs.io/en/main/reference/cartagen.generalize_boundaries.html#cartagen.generalize_boundaries">help online</a>.
         """
 
         return self.tr(helpstring)
@@ -790,7 +1342,7 @@ class BoundariesVisvalingam(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
-                self.tr('Input polygons to simplify :'),
+                self.tr('The input layer containing adjacent polygons to be generalized :'),
                 [QgsProcessing.TypeVectorPolygon]
             )
         )
@@ -849,4 +1401,350 @@ class BoundariesVisvalingam(QgsProcessingAlgorithm):
         
         return {
                 self.OUTPUT: dest_id
+            }
+
+class BoundariesWangMuller (QgsProcessingAlgorithm):
+    """
+            
+    Applies the Wang-Müller algorithm to the boundaries of the polygons. 
+
+    This algorithm proposed by Wang & Müller analyses the bends (curves) of a line or polygon and reduces those whose size falls below a given diameter tolerance, emulating the decisions a cartographer would make when generalising a line by hand. Topology is preserved throughout, a bend is only reduced if doing so does not cause the resulting geometry to self-intersect, cross another feature, or violate sidedness constraints.
+
+
+
+    This is a translation to work outside QGIS of the reduce bend algorithm of the geo_sim_processing QGIS plugin.
+
+    Parameters:
+
+            geometry (LineString, MultiLineString, Polygon, MultiPolygon, LinearRing) – The geometry to simplify.
+
+            tolerance (float) – Theoretical diameter (in the coordinate reference system units) of a bend to remove. Bends whose adjusted area is smaller than the iso-perimetric equivalent of a circle with this diameter are candidates for reduction. A good rule of thumb for cartographic generalisation is to use 0.5 mm at the target map scale (e.g. tolerance = 25 for a 1:50 000 map in metres). Higher values = more aggressive simplification.
+
+    Returns:
+
+        LineString, MultiLineString, Polygon, MultiPolygon, LinearRing – Simplified geometry of the same type as the input.
+
+    """
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    OUTPUT='OUTPUT'
+    INPUT='INPUT'
+    TOLERANCE='TOLERANCE'
+
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Boundaries Wang-Muller'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr(self.name())
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr(self.groupId())
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Boundaries'
+
+    def icon(self):
+        """
+        Should return a QIcon which is used for your provider inside
+        the Processing toolbox.
+        """
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        helpstring = """
+        Applies the Wang-Müller algorithm to the boundaries of the polygons.
+        This algorithm proposed by Wang & Müller analyses the bends (curves) of a line or polygon and reduces those whose size falls below a given diameter tolerance, emulating the decisions a cartographer would make when generalising a line by hand. Topology is preserved throughout, a bend is only reduced if doing so does not cause the resulting geometry to self-intersect, cross another feature, or violate sidedness constraints.
+        <h3> Parameters: </h3>
+        <ul>
+            <li> - <em>Tolerance </em> :  Theoretical diameter (in the coordinate reference system units) of a bend to remove. Bends whose adjusted area is smaller than the iso-perimetric equivalent of a circle with this diameter are candidates for reduction. A good rule of thumb for cartographic generalisation is to use 0.5 mm at the target map scale (e.g. tolerance = 25 for a 1:50 000 map in metres). Higher values = more aggressive simplification. </li>
+        </ul>
+
+        For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.generalize_boundaries.html#cartagen.generalize_boundaries">help online</a>.    
+        """
+        
+        return self.tr(helpstring)
+    
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return BoundariesWangMuller()
+
+    def initAlgorithm(self, config):
+        """
+        Here we define the inputs and output of the algorithm, along
+        with some other properties.
+        """
+                
+        # We add the input vector features source.
+        input = QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                self.tr(' The geometry to simplify :'),
+                [QgsProcessing.TypeVectorLine,QgsProcessing.TypeVectorPolygon]
+            )
+        self.addParameter(input)
+        
+        tolerance = QgsProcessingParameterNumber(
+            self.TOLERANCE,
+            self.tr('Tolerance :'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=25,
+            optional=False
+        )
+        self.addParameter(tolerance)
+        
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).   
+        output = QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Simplified Wang-Muller Boundaries'))
+        self.addParameter(output)
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """
+        import geopandas as gpd
+        import pandas
+        from cartagen import generalize_boundaries, simplify_wang_muller
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
+        
+        # retrieve the other parameters values
+        tolerance = self.parameterAsDouble(parameters, self.TOLERANCE, context)
+
+        # Actual algorithm
+        gdf_final = generalize_boundaries(gdf, algorithm=simplify_wang_muller, tolerance=tolerance)
+        res = gdf_final.to_dict('records')
+        res = list_to_qgis_feature_2(res, source.fields())
+
+        # Create the output sink    
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        
+        # Add a feature in the sink
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+        
+        return {
+            self.OUTPUT: dest_id
+            }
+    
+class BoundariesWhirlpool (QgsProcessingAlgorithm):
+    
+    """     
+    Applies the Whirlpool algorithm to the boundaries of the polygons. 
+
+    This algorithm proposed by Dougenik and Chrisman performs a line simplification that removes spiky vertices while preserving the overall shape of the line. It works by iterating through the vertices of the line and removing those that are within a specified distance (epsilon) from the last kept vertex.
+
+    This method is particularly effective at simplifying lines with many small, sharp angles, such as rivers or coastlines, while maintaining the general form of the line.
+
+    Parameters:
+
+            geometry (LineString, MultiLineString, Polygon, MultiPolygon, LinearRing) – The geometry to simplify.
+
+            threshold (float) – The minimum epsilon-distance to consider a vertex to be removed. Higher values = fewer points kept (more aggressive simplification).
+
+    Returns:
+
+        LineString, MultiLineString, Polygon, MultiPolygon, LinearRing
+
+    """
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    OUTPUT='OUTPUT'
+    INPUT='INPUT'
+    THRESHOLD='THRESHOLD'
+
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Boundaries Whirlpool'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr(self.name())
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr(self.groupId())
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Boundaries'
+
+    def icon(self):
+        """
+        Should return a QIcon which is used for your provider inside
+        the Processing toolbox.
+        """
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        helpstring = """
+        Applies the Whirlpool algorithm to the boundaries of the polygons.
+        This algorithm proposed by Dougenik and Chrisman performs a line simplification that removes spiky vertices while preserving the overall shape of the line. It works by iterating through the vertices of the line and removing those that are within a specified distance (epsilon) from the last kept vertex. This method is particularly effective at simplifying lines with many small, sharp angles, such as rivers or coastlines, while maintaining the general form of the line.
+        <h3> Parameters: </h3>
+        <ul>
+            <li> - <em>Threshold </em> :  The minimum epsilon-distance to consider a vertex to be removed. Higher values = fewer points kept (more aggressive simplification). </li>
+        </ul>
+        For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.generalize_boundaries.html#cartagen.generalize_boundaries">help online</a>.
+            
+        """
+        
+        return self.tr(helpstring)
+    
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return BoundariesWhirlpool()
+
+    def initAlgorithm(self, config):
+        """
+        Here we define the inputs and output of the algorithm, along
+        with some other properties.
+        """
+                
+        # We add the input vector features source.
+        input = QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                self.tr(' The geometry to simplify :'),
+                [QgsProcessing.TypeVectorLine,QgsProcessing.TypeVectorPolygon]
+            )
+        self.addParameter(input)
+        
+        threshold = QgsProcessingParameterNumber(
+            self.THRESHOLD,
+            self.tr('Threshold :'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=30,
+            optional=False
+        )
+        self.addParameter(threshold)
+        
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).   
+        output = QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Simplified Whirlpool Boundaries'))
+        self.addParameter(output)
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """
+        import geopandas as gpd
+        import pandas
+        from cartagen import generalize_boundaries, simplify_whirlpool
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
+        
+        #Retrieve the other parameters values
+        threshold = self.parameterAsDouble(parameters, self.THRESHOLD, context)
+
+        # Actual algorithm
+        gdf_final = generalize_boundaries(gdf, algorithm=simplify_whirlpool, threshold=threshold)
+        res = gdf_final.to_dict('records')
+        res = list_to_qgis_feature_2(res, source.fields())
+
+        # Create the output sink    
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        
+        # Add a feature in the sink
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+        
+        return {
+            self.OUTPUT: dest_id
             }

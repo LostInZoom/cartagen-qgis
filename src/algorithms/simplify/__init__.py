@@ -1,1 +1,2 @@
 from .line_simplification import SimplifyAngular, DouglasPeucker, VisvalingamWhyattQGIS, RaposoSimplificationQGIS, Lang, LiOpenshaw, ReumannWitkam, SimplifyWangMuller, Whirlpool
+from .generalize import GeneralizeAreaPatches

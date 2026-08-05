@@ -576,3 +576,262 @@ class SquaringPolygonNaive(QgsProcessingAlgorithm):
         return {
             self.OUTPUT: dest_id
         }
+    
+class SquarePolygonOrthogonal (QgsProcessingAlgorithm):
+    """
+            
+Squares a building by forcing it into an orthogonal coordinate system.
+
+This algorithm described by Hakim and Tsai [1] is a heuristic approach that leverages the Manhattan World assumption. It identifies the orientation of the building and performs a global rotation to align the footprint with the X/Y grid. Facades are then classified and merged into strictly horizontal or vertical lines. Perfect 90-degree corners are reconstructed via direct line intersections before an inverse rotation is applied to restore the building to its original geospatial location.
+
+Parameters:
+
+        polygon (Polygon) – The polygon to square.
+
+        orientation (str, optional) –
+
+        The method to calculate the orientation of the polygon. This defines the dominant axis used for the global rotation.
+
+            ’primary’ calculates the orientation of the longest side of the provided polygon.
+
+            ’mbr’ calculates the orientation of the long side of the minimum rotated bounding rectangle.
+
+            ’mbtr’ calculates the orientation of the long side of the minimum rotated bounding touching rectangle.
+
+            ’swo’ or statistical weighted orientation calculates the orientation using the statistical weighted orientation method.
+
+        force_all (bool, optional) – If set to True (default), every segment is snapped to whichever cardinal direction (H or V) it is closest to, regardless of the deviation. The angle_tolerance and correct_tolerance parameters are ignored in this mode. Set to False to apply tolerance-based squaring: only segments within angle_tolerance of a cardinal direction are snapped, and vertices already within correct_tolerance of right or flat are left alone.
+
+        angle_tolerance (float, optional) – Only used when force_all is False. Tolerance in degrees within which a segment is snapped to the nearest cardinal direction. Segments whose deviation exceeds this value are left unchanged (‘U’).
+
+        correct_tolerance (float, optional) – Only used when force_all is False. Tolerance in degrees below which a vertex is considered already correct and skipped.
+
+        remove_flat (bool, optional) – If set to True, vertices whose interior angle is flat (close to 180°) after squaring are removed from the result.
+
+Returns:
+
+    Polygon
+
+
+    """
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    OUTPUT = 'OUTPUT'
+    INPUT = 'INPUT'
+    ORIENTATION='ORIENTATION'
+    FORCE_ALL='FORCE_ALL'
+    ANGLE_TOLERANCE='ANGLE_TOLERANCE'
+    CORRECT_TOLERANCE='CORRECT_TOLERANCE'
+    REMOVE_FLAT='REMOVE_FLAT'
+
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Square Polygon Orthogonal'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr(self.name())
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr(self.groupId())
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Buildings'
+
+    def icon(self):
+        """
+        Should return a QIcon which is used for your provider inside
+        the Processing toolbox.
+        """
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        helpstring = """
+        Squares a building by forcing it into an orthogonal coordinate system.
+ This algorithm described by Hakim and Tsai [1] is a heuristic approach that leverages the Manhattan World assumption. It identifies the orientation of the building and performs a global rotation to align the footprint with the X/Y grid. Facades are then classified and merged into strictly horizontal or vertical lines. Perfect 90-degree corners are reconstructed via direct line intersections before an inverse rotation is applied to restore the building to its original geospatial location. Parameters: The method to calculate the orientation of the polygon. This defines the dominant axis used for the global rotation. ’primary’ calculates the orientation of the longest side of the provided polygon. ’mbr’ calculates the orientation of the long side of the minimum rotated bounding rectangle. ’mbtr’ calculates the orientation of the long side of the minimum rotated bounding touching rectangle.
+         <h3> Parameters: </h3>
+        <ul>
+          <li> - <em>Orientation </em> :  </li>
+          The method to calculate the orientation of the polygon. This defines the dominant axis used for the global rotation.
+                . ’primary’ calculates the orientation of the longest side of the provided polygon.
+                . ’mbr’ calculates the orientation of the long side of the minimum rotated bounding rectangle.
+                . ’mbtr’ calculates the orientation of the long side of the minimum rotated bounding touching rectangle.
+                . ’swo’ or statistical weighted orientation calculates the orientation using the statistical weighted orientation method.
+
+          <li> - <em>Force_all </em> :  If set to True (default), every segment is snapped to whichever cardinal direction (H or V) it is closest to, regardless of the deviation. The angle_tolerance and correct_tolerance parameters are ignored in this mode. Set to False to apply tolerance-based squaring: only segments within angle_tolerance of a cardinal direction are snapped, and vertices already within correct_tolerance of right or flat are left alone. </li>
+          <li> - <em>Angle_tolerance </em> :  Only used when force_all is False. Tolerance in degrees within which a segment is snapped to the nearest cardinal direction. Segments whose deviation exceeds this value are left unchanged (‘U’). </li>
+          <li> - <em>Correct_tolerance </em> :  Only used when force_all is False. Tolerance in degrees below which a vertex is considered already correct and skipped. </li>
+          <li> - <em>Remove_flat </em> :  If set to True, vertices whose interior angle is flat (close to 180°) after squaring are removed from the result. </li>
+        </ul>
+            For more see <a href="https://cartagen.readthedocs.io/en/main/reference/cartagen.square_polygon_orthogonal.html#cartagen.square_polygon_orthogonal">help online</a>.
+            
+        """
+        
+        return self.tr(helpstring)
+    
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return SquarePolygonOrthogonal()
+
+    def initAlgorithm(self, config):
+        """
+        Here we define the inputs and output of the algorithm, along
+        with some other properties.
+        """
+                
+        # We add the input vector features source.
+        input = QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                self.tr(' The polygon to square. :'),
+                [QgsProcessing.TypeVectorPolygon]
+            )
+        self.addParameter(input)
+        
+        orientations = ['mbtr','primary', 'mbr', 'swo']
+        orientation = QgsProcessingParameterEnum(
+            self.ORIENTATION,
+            self.tr('Orientation :'),
+            orientations,
+            defaultValue = "mbtr"
+        )
+        self.addParameter(orientation)
+                
+        force_all = QgsProcessingParameterBoolean(
+            self.FORCE_ALL,
+            self.tr('Force_all ?'),
+            defaultValue=True,
+            optional=False
+        )
+        self.addParameter(force_all)
+            
+        angle_tolerance = QgsProcessingParameterNumber(
+            self.ANGLE_TOLERANCE,
+            self.tr('Angle tolerance :'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=1,
+            optional=False
+        )
+        self.addParameter(angle_tolerance)
+        
+        correct_tolerance = QgsProcessingParameterNumber(
+            self.CORRECT_TOLERANCE,
+            self.tr('Correct tolerance :'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=1,
+            optional=False
+        )
+        self.addParameter(correct_tolerance)
+        
+        remove_flat = QgsProcessingParameterBoolean(
+            self.REMOVE_FLAT,
+            self.tr('Remove flat ?'),
+            defaultValue=True,
+            optional=False
+        )
+        self.addParameter(remove_flat)
+            
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).   
+        output = QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Squared Polygon Orthogonal'))
+        self.addParameter(output)
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """
+        import geopandas as gpd
+        import pandas
+        from cartagen import square_polygon_orthogonal
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
+        
+        # retrieve the other parameters values
+
+        orientations = ['primary', 'mbr', 'mbtr', 'swo']
+        orientation = self.parameterAsEnum(parameters, self.ORIENTATION, context)
+            
+        force_all = self.parameterAsBoolean(parameters, self.FORCE_ALL, context)
+            
+        angle_tolerance = self.parameterAsDouble(parameters, self.ANGLE_TOLERANCE, context)
+            
+        correct_tolerance = self.parameterAsDouble(parameters, self.CORRECT_TOLERANCE, context)
+            
+        remove_flat = self.parameterAsBoolean(parameters, self.REMOVE_FLAT, context)
+            
+        
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        features = source.getFeatures()
+
+        dp = gdf.copy()
+        for i in range(len(gdf)):
+            dp.loc[i,'geometry'] = square_polygon_orthogonal (list(gdf.geometry)[i], orientation=orientations[orientation],force_all=force_all,angle_tolerance=angle_tolerance,correct_tolerance=correct_tolerance,remove_flat=remove_flat)
+
+            # Update the progress bar
+            feedback.setProgress(int(i * total))
+
+        res = dp.to_dict('records')
+        res = list_to_qgis_feature_2(res,source.fields())
+
+        # Create the output sink    
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        
+        # Add a feature in the sink
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+        
+        return {
+            self.OUTPUT: dest_id
+            }
+        

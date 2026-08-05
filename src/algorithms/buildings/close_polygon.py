@@ -231,3 +231,199 @@ class ClosePolygon(QgsProcessingAlgorithm):
         return {
             self.OUTPUT: dest_id
         }
+    
+class OpenPolygon (QgsProcessingAlgorithm):
+    
+    """
+    Open a polygon using erosion and dilation.
+
+    This algorithm relies on the successive erosion and dilation of a polygon to get rid of thin sections.
+
+    Parameters:
+
+            polygon (Polygon or MultiPolygon) – The polygon to close.
+
+            size (float) – The size of the erosion and dilation.
+
+            quad_segs (int) – The number of linear segments in a quarter circle when performing the buffer. If above 1, the result may have round corners unsuitable for buildings.
+
+    Returns:
+
+        Polygon or MultiPolygon
+
+    """
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    OUTPUT='OUTPUT'
+    INPUT='INPUT'
+    SIZE='SIZE'
+    QUAD_SEGS='QUAD_SEGS'
+
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Open Polygon'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr(self.name())
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr(self.groupId())
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Buildings'
+
+    def icon(self):
+        """
+        Should return a QIcon which is used for your provider inside
+        the Processing toolbox.
+        """
+        from cartagen4qgis import get_plugin_icon
+        return get_plugin_icon()
+
+    def shortDescription(self):
+        """
+        Returns an optional translated short description of the algorithm. This 
+        should be at most a single sentence, e.g. “Converts 2D features to 3D by 
+        sampling a DEM raster.”
+        """
+        first_line = self.shortHelpString().strip().splitlines()[0]
+        description = self.tr(first_line)
+        
+        return(description)
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        helpstring = """
+        Open a polygon using erosion and dilation.
+        This algorithm relies on the successive erosion and dilation of a polygon to get rid of thin sections.
+        <h3> Parameters: </h3>
+        <ul>
+              <li> - <em>Size </em> :  The size of the erosion and dilation. </li>
+              <li> - <em>Quad segs </em> :  The number of linear segments in a quarter circle when performing the buffer. If above 1, the result may have round corners unsuitable for buildings. </li>
+        </ul>
+        For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.open_polygon.html#cartagen.open_polygon">help online</a>.
+            
+        """
+        
+        return self.tr(helpstring)
+    
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return OpenPolygon()
+
+    def initAlgorithm(self, config):
+        """
+        Here we define the inputs and output of the algorithm, along
+        with some other properties.
+        """
+                
+        # We add the input vector features source.
+        input = QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                self.tr('The polygon to open :'),
+                [QgsProcessing.TypeVectorPolygon]
+            )
+        self.addParameter(input)
+        
+        size = QgsProcessingParameterNumber(
+            self.SIZE,
+            self.tr('Size :'),
+            type=QgsProcessingParameterNumber.Double,
+            defaultValue=1,
+            optional=False
+        )
+        self.addParameter(size)
+        
+        quad_segs = QgsProcessingParameterNumber(
+            self.QUAD_SEGS,
+            self.tr('Quad segs :'),
+            type=QgsProcessingParameterNumber.Integer,
+            defaultValue=1,
+            optional=False
+        )
+        self.addParameter(quad_segs)
+            
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).   
+        output = QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Opened Polygon'))
+        self.addParameter(output)
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """
+        import geopandas as gpd
+        import pandas
+        from cartagen import open_polygon
+        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        gdf = gpd.GeoDataFrame.from_features(source.getFeatures())
+        
+        # Retrieve the other parameters values
+
+        size = self.parameterAsDouble(parameters, self.SIZE, context)
+        quad_segs = self.parameterAsInt(parameters, self.QUAD_SEGS, context)
+
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        features = source.getFeatures()
+
+        # Actual algorithm
+        dp = gdf.copy()
+        for i in range(len(gdf)):
+            dp.loc[i,'geometry'] = open_polygon (list(gdf.geometry)[i], size=size,quad_segs=quad_segs)
+
+            # Update the progress bar
+            feedback.setProgress(int(i * total))
+
+        res = dp.to_dict('records')
+        res = list_to_qgis_feature_2(res,source.fields())
+        
+        # Create the output sink    
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                context, res[0].fields(), source.wkbType(), source.sourceCrs())
+        
+        # Add a feature in the sink
+        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+        
+        return {
+            self.OUTPUT: dest_id
+            }

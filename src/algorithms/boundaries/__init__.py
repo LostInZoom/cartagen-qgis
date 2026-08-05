@@ -1,1 +1,1 @@
-from .administrative_boundaries import BoundariesDouglasPeucker, BoundariesLiOpenshaw, BoundariesRaposo, BoundariesVisvalingam
+from .administrative_boundaries import BoundariesAngular, BoundariesDouglasPeucker, BoundariesLang, BoundariesLiOpenshaw, BoundariesRaposo, BoundariesReumannWitkam, BoundariesVisvalingam, BoundariesWangMuller, BoundariesWhirlpool

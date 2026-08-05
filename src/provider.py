@@ -54,25 +54,35 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         from .algorithms import (
 
             #Boundaries
+            BoundariesAngular,
             BoundariesDouglasPeucker,
-            BoundariesRaposo,
+            BoundariesLang,
             BoundariesLiOpenshaw,
+            BoundariesRaposo,
+            BoundariesReumannWitkam,
             BoundariesVisvalingam,
+            BoundariesWangMuller,
+            BoundariesWhirlpool,
 
             #Buildings
             BoffetArea,
             ClosePolygon,
+            OpenPolygon,
             MorphologicalAmalgamation,
-            BuildingFER,
-            BuildingRectangle,
-            BuildingRegression,
             BuildingSimplificationRuasQGIS,
             BuildingDisplacementRandomQGIS,
             SquaringPolygonLS,
             SquaringPolygonNaive,
+            SquarePolygonOrthogonal,
+            TypifyMatching,
+            TypifyBurghardtCecconi,
+
+            #Lines
+            BeamsDisplacement,
+            # PropagationCrowFlies,
+            PropagationNetwork,
 
             #Network
-            BuildStrokes,
             CollapseRoundaboutsQGIS,
             CollapseBranchingCrossroads,
             CollapseDualCarriageways,
@@ -82,9 +92,7 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
             EliminateDeadEnds,
             DetectDualCarriageways,
             RuralTraffic,
-
-            #Partitioning
-            NetworkFacesQGIS,
+            RuralBetweeness,
 
             #Points
             VectorHeatmap,
@@ -93,6 +101,11 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
             ReduceKmeans,
             ReduceLabelgrid,
             ReduceQuadtree,
+
+            #Regularize Buildings
+            BuildingFER,
+            BuildingRectangle,
+            BuildingRegression,
 
             #Simplify
             SimplifyAngular,
@@ -104,6 +117,7 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
             VisvalingamWhyattQGIS,
             SimplifyWangMuller,
             Whirlpool,
+            GeneralizeAreaPatches,            
 
             #Skeletonize And Spinalize
             SkelNatural,
@@ -118,30 +132,50 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
             SmoothSnake,
             SmoothTaubin,
             SmoothTopographic,
-            SmoothWMA
+            SmoothWMA,
 
+            #Tools
+            InflexionPoints,
+            MakePlanar,
+            NetworkFacesQGIS,
+            StrokesRoads,
+            BuildStrokesRivers,
+            PolygonElongation,
+            PolygonCompactness,
+            PolygonConcavity,
+            PolygonOrientation
         )
 
         #Boundaries
+        self.addAlgorithm(BoundariesAngular())
         self.addAlgorithm(BoundariesDouglasPeucker())
+        self.addAlgorithm(BoundariesLang())
         self.addAlgorithm(BoundariesLiOpenshaw())
         self.addAlgorithm(BoundariesRaposo())
+        self.addAlgorithm(BoundariesReumannWitkam())
         self.addAlgorithm(BoundariesVisvalingam())
+        self.addAlgorithm(BoundariesWangMuller())
+        self.addAlgorithm(BoundariesWhirlpool())
 
         # Buildings
-        self.addAlgorithm(SquaringPolygonLS())
-        self.addAlgorithm(SquaringPolygonNaive())
-        self.addAlgorithm(BuildingSimplificationRuasQGIS())
-        self.addAlgorithm(BuildingDisplacementRandomQGIS())
-        self.addAlgorithm(MorphologicalAmalgamation())
         self.addAlgorithm(BoffetArea())
         self.addAlgorithm(ClosePolygon())
-        self.addAlgorithm(BuildingFER())
-        self.addAlgorithm(BuildingRectangle())
-        self.addAlgorithm(BuildingRegression())
-        
+        self.addAlgorithm(OpenPolygon())
+        self.addAlgorithm(MorphologicalAmalgamation())
+        self.addAlgorithm(SquaringPolygonLS())
+        self.addAlgorithm(SquaringPolygonNaive())
+        self.addAlgorithm(SquarePolygonOrthogonal())
+        self.addAlgorithm(BuildingSimplificationRuasQGIS())
+        self.addAlgorithm(BuildingDisplacementRandomQGIS())
+        self.addAlgorithm(TypifyMatching())
+        self.addAlgorithm(TypifyBurghardtCecconi())
+
+        # Displacement
+        self.addAlgorithm(BeamsDisplacement())
+        # self.addAlgorithm(PropagationCrowFlies())
+        self.addAlgorithm(PropagationNetwork())
+
         # Network
-        self.addAlgorithm(BuildStrokes())
         self.addAlgorithm(DetectRoundaboutsQGIS())
         self.addAlgorithm(DetectDeadEnds())
         self.addAlgorithm(EliminateDeadEnds())
@@ -151,9 +185,7 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         self.addAlgorithm(DetectDualCarriageways())
         self.addAlgorithm(CollapseDualCarriageways())
         self.addAlgorithm(RuralTraffic())
-
-        # Partitioning
-        self.addAlgorithm(NetworkFacesQGIS())
+        self.addAlgorithm(RuralBetweeness())
         
         # Points
         self.addAlgorithm(ReduceKmeans())
@@ -166,6 +198,11 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         # Processes
         # self.addAlgorithm(ConstraintMethodQGIS())
 
+        #Regularize        
+        self.addAlgorithm(BuildingFER())
+        self.addAlgorithm(BuildingRectangle())
+        self.addAlgorithm(BuildingRegression())
+
         # Simplify
         self.addAlgorithm(SimplifyAngular())
         self.addAlgorithm(DouglasPeucker())
@@ -176,6 +213,7 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         self.addAlgorithm(VisvalingamWhyattQGIS())
         self.addAlgorithm(SimplifyWangMuller())
         self.addAlgorithm(Whirlpool())
+        self.addAlgorithm(GeneralizeAreaPatches())
 
         #Skeletonize and Spinalize
         self.addAlgorithm(SkelNatural())
@@ -191,7 +229,18 @@ class CartAGen4QGISProvider(QgsProcessingProvider):
         self.addAlgorithm(SmoothTaubin())
         self.addAlgorithm(SmoothTopographic())
         self.addAlgorithm(SmoothWMA())
-                
+
+        #Tools
+        # self.addAlgorithm(InflexionPoints())
+        self.addAlgorithm(NetworkFacesQGIS())
+        self.addAlgorithm(MakePlanar())
+        self.addAlgorithm(PolygonElongation())
+        self.addAlgorithm(PolygonCompactness())
+        self.addAlgorithm(PolygonConcavity())
+        self.addAlgorithm(PolygonOrientation())
+        self.addAlgorithm(StrokesRoads())
+        self.addAlgorithm(BuildStrokesRivers())
+        
         self._algorithms_loaded = True
 
     def id(self):

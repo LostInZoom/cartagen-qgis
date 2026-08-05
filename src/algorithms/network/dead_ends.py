@@ -87,7 +87,7 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Detect dead ends'
+        return 'Detect DeadEnds'
 
     def displayName(self):
         """
@@ -309,7 +309,7 @@ class EliminateDeadEnds(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Eliminate dead ends'
+        return 'Eliminate DeadEnds'
 
     def displayName(self):
         """
