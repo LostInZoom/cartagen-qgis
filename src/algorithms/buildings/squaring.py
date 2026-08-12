@@ -249,7 +249,7 @@ class SquaringPolygonLS(QgsProcessingAlgorithm):
         Here is where the processing itself takes place.
         """
         from cartagen import square_polygon_ls
-        from shapely import Polygon
+        from shapely import Polygon, MultiPolygon
         from shapely.wkt import loads
         import geopandas as gpd
         from cartagen4qgis.src.tools import list_to_qgis_feature_2
@@ -282,7 +282,11 @@ class SquaringPolygonLS(QgsProcessingAlgorithm):
         gs = gdf.copy()
         for i in range(len(gdf)):
             geommultiple = gs['geometry'].loc[i]
-            listGeomSimple = list(geommultiple.geoms)
+            try:
+                listGeomSimple = list(geommultiple.geoms)
+            except:
+                listGeomSimple = [geommultiple]
+                
             listeTraitee = []
 
             for ligne in listGeomSimple:
@@ -291,7 +295,7 @@ class SquaringPolygonLS(QgsProcessingAlgorithm):
                     )
                 listeTraitee.append(ligneTraitee)
 
-            gs.loc[i,'geometry'] = listeTraitee
+            gs.loc[i,'geometry'] = MultiPolygon(listeTraitee)
 
         res = gs.to_dict('records')
         res = list_to_qgis_feature_2(res, source.fields())
@@ -518,7 +522,7 @@ class SquaringPolygonNaive(QgsProcessingAlgorithm):
         Here is where the processing itself takes place.
         """
         from cartagen import square_polygon_naive
-        from shapely import Polygon
+        from shapely import Polygon, MultiPolygon
         from shapely.wkt import loads
         import geopandas as gpd
         from cartagen4qgis.src.tools import list_to_qgis_feature_2
@@ -546,16 +550,19 @@ class SquaringPolygonNaive(QgsProcessingAlgorithm):
         gs = gdf.copy()
         for i in range(len(gdf)):
             geommultiple = gs['geometry'].loc[i]
-            listGeomSimple = list(geommultiple.geoms)
+            try:
+                listGeomSimple = list(geommultiple.geoms)
+            except:
+                listGeomSimple = [geommultiple]
             listeTraitee = []
 
             for ligne in listGeomSimple:
                 ligneTraitee = square_polygon_naive(
-                    ligne, orient=dicoOrient[orient], angle_tolerance=angle_tolerance, correct_tolerance=correct_tolerance, remove_flat=remove_flat
+                    ligne, orientation=dicoOrient[orient], angle_tolerance=angle_tolerance, correct_tolerance=correct_tolerance, remove_flat=remove_flat
                 )
                 listeTraitee.append(ligneTraitee)
 
-            gs.loc[i,'geometry'] = listeTraitee
+            gs.loc[i,'geometry'] = MultiPolygon(listeTraitee)
 
         res = gs.to_dict('records')
         res = list_to_qgis_feature_2(res, source.fields())
@@ -786,6 +793,7 @@ Returns:
         """
         import geopandas as gpd
         import pandas
+        from shapely import Polygon, MultiPolygon
         from cartagen import square_polygon_orthogonal
         from cartagen4qgis.src.tools import list_to_qgis_feature_2
 
@@ -814,14 +822,30 @@ Returns:
         total = 100.0 / source.featureCount() if source.featureCount() else 0
         features = source.getFeatures()
 
-        dp = gdf.copy()
+        #Preparing the data and process
+        gs = gdf.copy()
         for i in range(len(gdf)):
-            dp.loc[i,'geometry'] = square_polygon_orthogonal (list(gdf.geometry)[i], orientation=orientations[orientation],force_all=force_all,angle_tolerance=angle_tolerance,correct_tolerance=correct_tolerance,remove_flat=remove_flat)
+            geommultiple = gs['geometry'].loc[i]
+            
+            try:
+                listGeomSimple = list(geommultiple.geoms)
+            except:
+                listGeomSimple = [geommultiple]
+            listeTraitee = []
+
+            for ligne in listGeomSimple:
+                ligneTraitee = square_polygon_orthogonal(ligne, orientation=orientations[orientation], force_all=force_all, angle_tolerance=angle_tolerance, correct_tolerance=correct_tolerance, remove_flat=remove_flat)
+                listeTraitee.append(ligneTraitee)
+
+            gs.loc[i,'geometry'] = MultiPolygon(listeTraitee)
+        # dp = gdf.copy()
+        # for i in range(len(gdf)):
+        #     dp.loc[i,'geometry'] = square_polygon_orthogonal (list(gdf.geometry)[i], orientation=orientations[orientation],force_all=force_all,angle_tolerance=angle_tolerance,correct_tolerance=correct_tolerance,remove_flat=remove_flat)
 
             # Update the progress bar
             feedback.setProgress(int(i * total))
 
-        res = dp.to_dict('records')
+        res = gs.to_dict('records')
         res = list_to_qgis_feature_2(res,source.fields())
 
         # Create the output sink    

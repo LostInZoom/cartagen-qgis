@@ -75,7 +75,7 @@ class BuildingSimplificationRuasQGIS(QgsProcessingAlgorithm):
                 <li> - <em> Parallel Limit </em> : limit angle to consider an edge into the parallel case of the simplification algorithm. The default value is set to 20*π/180 </li>
                 <li> - <em> Orthogonal Limit </em> : limit angle to consider an edge into the orthogonal case of the simplification algorithm. The default value is set to 20*π/180" </li>
             </ul>
-            For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.regularize_building_regression.html">help online</a>.
+            For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.simplify_building_ruas.html#cartagen.simplify_building_ruas">help online</a>.
             """)
         
     def displayName(self):
@@ -176,7 +176,7 @@ class BuildingSimplificationRuasQGIS(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
-        from cartagen import simplify_building
+        from cartagen import simplify_building_ruas
         from shapely.wkt import loads
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
@@ -201,7 +201,7 @@ class BuildingSimplificationRuasQGIS(QgsProcessingAlgorithm):
             wkt = feature.geometry().asWkt()
             shapely_geom = loads(wkt)
             
-            simplified = simplify_building(shapely_geom, self.parameterAsInt(parameters,self.THRESHOLD,context), self.parameterAsDouble(parameters,self.ORTHOGONAL_LIMIT,context), self.parameterAsDouble(parameters,self.PARALLEL_LIMIT,context))
+            simplified = simplify_building_ruas(shapely_geom, self.parameterAsInt(parameters,self.THRESHOLD,context), self.parameterAsDouble(parameters,self.ORTHOGONAL_LIMIT,context), self.parameterAsDouble(parameters,self.PARALLEL_LIMIT,context))
 
             result = QgsFeature()
             result.setGeometry(QgsGeometry.fromWkt(simplified.wkt))
