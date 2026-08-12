@@ -578,7 +578,7 @@ class RuralBetweeness (QgsProcessingAlgorithm):
         import geopandas as gpd
         import pandas
         from cartagen import rural_betweeness
-        from cartagen4qgis.src.tools import list_to_qgis_feature_2
+        from cartagen4qgis.src.tools import list_to_qgis_feature
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
@@ -591,7 +591,10 @@ class RuralBetweeness (QgsProcessingAlgorithm):
         sample_size = self.parameterAsInt(parameters, self.SAMPLE_SIZE, context)
         threshold = self.parameterAsInt(parameters, self.THRESHOLD, context)
         cost = self.parameterAsFields(parameters, self.COST, context)
-        print(f"cost : {cost[0]}")
+        if len(cost) < 1:
+            cost = None
+        else: 
+            cost = cost[0]
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
@@ -599,10 +602,10 @@ class RuralBetweeness (QgsProcessingAlgorithm):
         features = source.getFeatures()
 
         dp = gdf.copy()
-        dp = rural_betweeness(gdf, sample_size=sample_size, threshold=threshold, cost=cost[0])
+        dp = rural_betweeness(gdf, sample_size=sample_size, threshold=threshold, cost=cost)
 
         res = dp.to_dict('records')
-        res = list_to_qgis_feature_2(res,source.fields())
+        res = list_to_qgis_feature(res)
 
         # Create the output sink    
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,

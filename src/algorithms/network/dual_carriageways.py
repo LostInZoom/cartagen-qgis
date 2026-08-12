@@ -170,15 +170,14 @@ class DetectDualCarriageways(QgsProcessingAlgorithm):
             
             <h3> Parameters: </h3>
             <ul>
-                <li> - <em>Parameters</em> : </li>
-                <li> - <em>- Importance</em> : the attribute name of the data on which road importance is based. Default value is set to None which means every road is taken for the network face calculation.</li>
-                <li> - <em>- Value</em> : maximum value of the importance attribute. Roads with an importance higher than this value will not be taken.</li>
-                <li> - <em>- Concavity</em> : maximum concavity. (concavity is the area of the polygon divided by the area of its convex hull)</li>
-                <li> - <em>- Elongation</em> : minimum elongation. (elongation is the length of the minimum rotated rectangle divided by its width)</li>
-                <li> - <em>- Compactness</em> : maximum compactness. (compactness is calculated using (4*pi*area)/(perimeter^2))</li>
-                <li> - <em>- Area</em> : area factor to detect very long motorways.</li>
-                <li> - <em>- Width</em> : maximum width of the the minimum rotated rectangle.</li>
-                <li> - <em>- Huber</em> : Huber width for long motorways</li>
+                <li> - <em> Importance</em> : the attribute name of the data on which road importance is based. Default value is set to None which means every road is taken for the network face calculation.</li>
+                <li> - <em> Value</em> : maximum value of the importance attribute. Roads with an importance higher than this value will not be taken.</li>
+                <li> - <em> Concavity</em> : maximum concavity. (concavity is the area of the polygon divided by the area of its convex hull)</li>
+                <li> - <em> Elongation</em> : minimum elongation. (elongation is the length of the minimum rotated rectangle divided by its width)</li>
+                <li> - <em> Compactness</em> : maximum compactness. (compactness is calculated using (4*pi*area)/(perimeter^2))</li>
+                <li> - <em> Area</em> : area factor to detect very long motorways.</li>
+                <li> - <em> Width</em> : maximum width of the the minimum rotated rectangle.</li>
+                <li> - <em> Huber</em> : Huber width for long motorways</li>
             </ul>
 
             For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.detect_dual_carriageways.html#cartagen.detect_dual_carriageways">help online</a>.

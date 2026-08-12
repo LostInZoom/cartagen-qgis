@@ -138,7 +138,7 @@ class DetectDeadEnds(QgsProcessingAlgorithm):
             <li> - <em>Outside faces</em> : whether dead-ends should be calculated on the outside faces of the road network. This can induce wrong characterization on the border of the provided dataset.</li>
         </ul>
 
-        For more see <a href="cartagen.readthedocs.io/en/latest/reference/cartagen.detect_dead_ends.html#cartagen.detect_dead_ends">help online</a>.'
+        For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.detect_dead_ends.html#cartagen.detect_dead_ends">help online</a>.
         """
         return self.tr(helpstring)
         
@@ -359,7 +359,7 @@ class EliminateDeadEnds(QgsProcessingAlgorithm):
                 <li> - <em>Length</em> : length below which dead-ends are eliminated. If left to 0, shorter dead-ends are not eliminated.</li>
                 <li> - <em>Keep longest</em> : if set to True, in case of complex dead-end, keep only the main component. If False, eliminate the whole dead-end group. This concerns also dead-ends with a length above the provided threshold.</li>
             </ul>
-            For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.eliminate_dead_ends.html#cartagen.eliminate_dead_ends">help online</a>.'
+            For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.eliminate_dead_ends.html#cartagen.eliminate_dead_ends">help online</a>.
         """
         return self.tr(helpstring)
         

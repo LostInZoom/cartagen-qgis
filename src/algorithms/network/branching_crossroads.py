@@ -468,7 +468,7 @@ class CollapseBranchingCrossroads(QgsProcessingAlgorithm):
             <li> - <em>Crossroads</em> : polygons representing the faces of the network detected as branching crossroads. Crossroads connected to a roundabout won't be collapsed.</li>
             <li> - <em>Maximum_area</em> : the area, in square meter, below which branching crossroads are collapsed. Collpase all crossraods if left to None.</li>
         </ul>
-        For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.collapse_branching_crossroads.html#cartagen.collapse_branching_crossroads">help online</a>.'
+        For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.collapse_branching_crossroads.html#cartagen.collapse_branching_crossroads">help online</a>.
         """
         return self.tr(helpstring)
         
