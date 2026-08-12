@@ -38,19 +38,19 @@ import geopandas as gpd
 class BoundariesAngular (QgsProcessingAlgorithm):
     
     """    
-Applies the simplify angular to the boundaries of a polygon.
+    Applies the simplify angular to the boundaries of a polygon.
 
-This algorithm, proposed by McMaster, eliminates vertices that represent very small turning angles (< 10 degrees). This prevents rounding filters from destroying sharp curvatures, granting the resulting geometry a "manually generalised" characteristic where significant bends remain prominent.
+    This algorithm, proposed by McMaster, eliminates vertices that represent very small turning angles (< 10 degrees). This prevents rounding filters from destroying sharp curvatures, granting the resulting geometry a "manually generalised" characteristic where significant bends remain prominent.
 
-Accept Multi geometries. If a polygon is provided, it also applies the thinning to its holes using the same parameters.
+    Accept Multi geometries. If a polygon is provided, it also applies the thinning to its holes using the same parameters.
 
-Parameters:
+    Parameters:
 
-        geometry (LineString, MultiLineString, Polygon, MultiPolygon, LinearRing) – The geometry to thin. If an open line is provided, the endpoints are preserved. If a closed ring or polygon is provided, the angles wrap around.
+            geometry (LineString, MultiLineString, Polygon, MultiPolygon, LinearRing) – The geometry to thin. If an open line is provided, the endpoints are preserved. If a closed ring or polygon is provided, the angles wrap around.
 
-        angle (float, optional) – Turning-angle threshold in degrees. Vertices creating an exterior angle below this limit will be iteratively removed. Default is 10.0.
+            angle (float, optional) – Turning-angle threshold in degrees. Vertices creating an exterior angle below this limit will be iteratively removed. Default is 10.0.
 
-Returns:
+    Returns:
 
     LineString, MultiLineString, Polygon, MultiPolygon, LinearRing : Thinned geometry of the same type as input.
     """
@@ -125,7 +125,7 @@ Returns:
         helpstring = """
         
         Applies simplify_angular to the boundaries of a polygon.
-        This algorithm, proposed by McMaster, eliminates vertices that represent very small turning angles (< 10 degrees). This prevents rounding filters from destroying sharp curvatures, granting the resulting geometry a "manually generalised" characteristic where significant bends remain prominent. Accept Multi geometries. If a polygon is provided, it also applies the thinning to its holes using the same parameters.
+        This algorithm, proposed by McMaster, eliminates vertices that represent very small turning angles (less than 10 degrees). This prevents rounding filters from destroying sharp curvatures, granting the resulting geometry a "manually generalised" characteristic where significant bends remain prominent. Accept Multi geometries. If a polygon is provided, it also applies the thinning to its holes using the same parameters.
         <h3> Parameters: </h3>
         <ul>
             <li> - <em>Angle </em> :  Turning-angle threshold in degrees. Vertices creating an exterior angle below this limit will be iteratively removed. Default is 10.0. </li>
@@ -301,7 +301,9 @@ class BoundariesDouglasPeucker(QgsProcessingAlgorithm):
         helpstring = """
             <b> /!\ Doesn't function with multipart geometry /!\ </b>
 
-+            As most polygons share their boundaries with another polygon, the simplification is only applied to the common line, so that no topological disconnection is created between adjacent polygons.
+            Applies the Douglas-Peucker-Ramer algorithm to the boundaries of the polygons.
+
+            As most polygons share their boundaries with another polygon, the simplification is only applied to the common line, so that no topological disconnection is created between adjacent polygons.
             
             <b> Works best with administrative boundaries. </b>
             
@@ -418,13 +420,13 @@ class BoundariesDouglasPeucker(QgsProcessingAlgorithm):
 class BoundariesLang (QgsProcessingAlgorithm):
     """
             
-Simplify a line or polygon using a look-ahead distance-based selection.
+    Simplify a line or polygon using a look-ahead distance-based selection.
 
-This algorithm, proposed by Lang, performs a simplification by defining a search region of a fixed number of vertices (look-ahead). It serves as a middle ground between local sequential filters and global algorithms like Douglas-Peucker.
+    This algorithm, proposed by Lang, performs a simplification by defining a search region of a fixed number of vertices (look-ahead). It serves as a middle ground between local sequential filters and global algorithms like Douglas-Peucker.
 
-The principle of the algorithm is to create a segment between the current vertex and a vertex further down the line. The perpendicular distances from all intermediate vertices to this segment are calculated. If any distance exceeds the tolerance, the search region is shrunk by moving the end vertex one step closer to the start, and the process repeats until all intermediate points fall within the tolerance. Once a valid segment is found, all intermediate points are removed, and the process restarts from the end of that segment.
+    The principle of the algorithm is to create a segment between the current vertex and a vertex further down the line. The perpendicular distances from all intermediate vertices to this segment are calculated. If any distance exceeds the tolerance, the search region is shrunk by moving the end vertex one step closer to the start, and the process repeats until all intermediate points fall within the tolerance. Once a valid segment is found, all intermediate points are removed, and the process restarts from the end of that segment.
 
-Parameters:
+    Parameters:
 
         geometry (LineString, MultiLineString, Polygon, MultiPolygon, LinearRing) – The geometry to simplify.
 
@@ -432,7 +434,7 @@ Parameters:
 
         look_ahead (int, optional) – The maximum number of vertices to consider in a single search window. Higher values allow for more aggressive simplification but increase computational cost.
 
-Returns:
+    Returns:
 
     LineString, MultiLineString, Polygon, MultiPolygon, LinearRing
 
@@ -953,6 +955,7 @@ class BoundariesRaposo(QgsProcessingAlgorithm):
                 self.INITIAL_SCALE,
                 self.tr('Initial scale :'),
                 type=QgsProcessingParameterNumber.Integer,
+                defaultValue=25000,
                 optional=False
             )
         self.addParameter(initial_scale)	  
@@ -960,6 +963,7 @@ class BoundariesRaposo(QgsProcessingAlgorithm):
         final_scale = QgsProcessingParameterNumber(
                 self.FINAL_SCALE,
                 self.tr('Final scale :'),
+                defaultValue=50000,
                 type=QgsProcessingParameterNumber.Integer,
                 optional=False
             )
@@ -1013,23 +1017,35 @@ class BoundariesRaposo(QgsProcessingAlgorithm):
         centroid = self.parameterAsBoolean(parameters, self.CENTROID, context)
         tobler = self.parameterAsBoolean(parameters, self.TOBLER, context)
 
+        if initial_scale == 0.0:
 
-        # Actual algorithm
-        gdf_final = generalize_boundaries(gdf, algorithm=simplify_raposo, initial_scale=initial_scale, final_scale=final_scale, centroid=centroid, tobler=tobler)
+            from qgis.core import QgsMessageLog, Qgis
+            feedback.pushInfo("ERROR WITH CARTAGEN :")
+            feedback.pushInfo(f"The Initial scale is equal to 0. The algorithm Simplify Raposo can't work.")
+
+            from qgis.core import QgsWkbTypes
+            feature = QgsFeature() #create a QgsFeature()
+            (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
+                    context, feature.fields(), QgsWkbTypes.Unknown, source.sourceCrs())
+
+        else: 
+            from qgis.core import QgsWkbTypes
+            # Actual algorithm
+            gdf_final = generalize_boundaries(gdf, algorithm=simplify_raposo, initial_scale=initial_scale, final_scale=final_scale, centroid=centroid, tobler=tobler)
+            
+            res = gdf_final.to_dict('records')
+            res = list_to_qgis_feature_2(res, source.fields())
         
-        res = gdf_final.to_dict('records')
-        res = list_to_qgis_feature_2(res)
-     
-        #Create the feature sink
-        (sink, dest_id) = self.parameterAsSink(
-            parameters, self.OUTPUT, context,
-            fields=res[0].fields(),
-            geometryType=QgsWkbTypes.Polygon,
-            crs=source.sourceCrs()
-        )
-        
-        #Add features to the sink
-        sink.addFeatures(res, QgsFeatureSink.FastInsert)
+            #Create the feature sink
+            (sink, dest_id) = self.parameterAsSink(
+                parameters, self.OUTPUT, context,
+                fields=res[0].fields(),
+                geometryType=QgsWkbTypes.Polygon,
+                crs=source.sourceCrs()
+            )
+            
+            #Add features to the sink
+            sink.addFeatures(res, QgsFeatureSink.FastInsert)
         
         return {
                 self.OUTPUT: dest_id
@@ -1155,7 +1171,7 @@ class BoundariesReumannWitkam (QgsProcessingAlgorithm):
         input = QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr('The input layer containing adjacent polygons to be generalized :'),
-                [QgsProcessing.TypeVectorLine,QgsProcessing.TypeVectorPolygon]
+                [QgsProcessing.TypeVectorPolygon]
             )
         self.addParameter(input)
         
@@ -1303,7 +1319,10 @@ class BoundariesVisvalingam(QgsProcessingAlgorithm):
         helpstring = """
             <b> /!\ Doesn't work with multipart geometry. Using a length too low can produce an invalid geometry. /!\ </b>
             
-            Applies the Visvialingam-Whyatt algorithm to the boundaries of the polygons. 
+            Applies the Visvialingam-Whyatt algorithm to the boundaries of the polygons.
+
+            This algorithm proposed by Visvalingam and Whyatt performs a line simplification that produces less angular results than the filtering algorithm of Ramer-Douglas-Peucker. The principle of the algorithm is to select the vertices to delete (the less characteristic ones) rather than choosing the vertices to keep (in the Douglas and Peucker algorithm). To select the vertices to delete, there is an iterative process, and at each iteration, the triangles formed by three consecutive vertices are computed. If the area of the smallest triangle is smaller than a threshold, the middle vertex is deleted, and another iteration starts.
+
             As most polygons share their boundaries with another polygon, the simplification is only applied to the common line, so that no topological disconnection is created between adjacent polygons.
             
             <b> Works best with administrative boundaries. </b>
@@ -1384,7 +1403,7 @@ class BoundariesVisvalingam(QgsProcessingAlgorithm):
         area_tolerance = self.parameterAsDouble(parameters, self.AREA_TOLERANCE, context)
         
         # Actual algorithm
-        gdf_final = generalize_boundaries(gdf, algorithm=simplify_visvalingam_whyatt, area_tolerance=area_tolerance)
+        gdf_final = generalize_boundaries(gdf, algorithm=simplify_visvalingam_whyatt, threshold=area_tolerance)
         res = gdf_final.to_dict('records')
         res = list_to_qgis_feature_2(res, source.fields())
      
@@ -1496,6 +1515,7 @@ class BoundariesWangMuller (QgsProcessingAlgorithm):
         helpstring = """
         Applies the Wang-Müller algorithm to the boundaries of the polygons.
         This algorithm proposed by Wang & Müller analyses the bends (curves) of a line or polygon and reduces those whose size falls below a given diameter tolerance, emulating the decisions a cartographer would make when generalising a line by hand. Topology is preserved throughout, a bend is only reduced if doing so does not cause the resulting geometry to self-intersect, cross another feature, or violate sidedness constraints.
+        As most polygons share their boundaries with another polygon, the simplification is only applied to the common line, so that no topological disconnection is created between adjacent polygons.
         <h3> Parameters: </h3>
         <ul>
             <li> - <em>Tolerance </em> :  Theoretical diameter (in the coordinate reference system units) of a bend to remove. Bends whose adjusted area is smaller than the iso-perimetric equivalent of a circle with this diameter are candidates for reduction. A good rule of thumb for cartographic generalisation is to use 0.5 mm at the target map scale (e.g. tolerance = 25 for a 1:50 000 map in metres). Higher values = more aggressive simplification. </li>
@@ -1522,7 +1542,7 @@ class BoundariesWangMuller (QgsProcessingAlgorithm):
         input = QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr(' The geometry to simplify :'),
-                [QgsProcessing.TypeVectorLine,QgsProcessing.TypeVectorPolygon]
+                [QgsProcessing.TypeVectorPolygon]
             )
         self.addParameter(input)
         
@@ -1668,6 +1688,7 @@ class BoundariesWhirlpool (QgsProcessingAlgorithm):
         helpstring = """
         Applies the Whirlpool algorithm to the boundaries of the polygons.
         This algorithm proposed by Dougenik and Chrisman performs a line simplification that removes spiky vertices while preserving the overall shape of the line. It works by iterating through the vertices of the line and removing those that are within a specified distance (epsilon) from the last kept vertex. This method is particularly effective at simplifying lines with many small, sharp angles, such as rivers or coastlines, while maintaining the general form of the line.
+        As most polygons share their boundaries with another polygon, the simplification is only applied to the common line, so that no topological disconnection is created between adjacent polygons.
         <h3> Parameters: </h3>
         <ul>
             <li> - <em>Threshold </em> :  The minimum epsilon-distance to consider a vertex to be removed. Higher values = fewer points kept (more aggressive simplification). </li>
@@ -1694,7 +1715,7 @@ class BoundariesWhirlpool (QgsProcessingAlgorithm):
         input = QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr(' The geometry to simplify :'),
-                [QgsProcessing.TypeVectorLine,QgsProcessing.TypeVectorPolygon]
+                [QgsProcessing.TypeVectorPolygon]
             )
         self.addParameter(input)
         
