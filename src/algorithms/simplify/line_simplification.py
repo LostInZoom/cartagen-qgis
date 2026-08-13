@@ -137,8 +137,6 @@ class SimplifyAngular (QgsProcessingAlgorithm):
                 <li> - <em>Angle </em> :  Turning-angle threshold in degrees. Vertices creating an exterior angle below this limit will be iteratively removed. Default is 10.0. </li>
             </ul>
 
-            <img src="../illustration/simplify/angular.png"/>
-
             For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.simplify_angular.html#cartagen.simplify_angular">help online</a>.
         """
         
@@ -517,7 +515,7 @@ class Lang(QgsProcessingAlgorithm):
         should be at most a single sentence, e.g. “Converts 2D features to 3D by 
         sampling a DEM raster.”
         """
-        first_line = self.shortHelpString().strip().splitlines()[4]
+        first_line = self.shortHelpString().strip().splitlines()[1]
         description = self.tr(first_line)
         
         return(description)
@@ -530,17 +528,16 @@ class Lang(QgsProcessingAlgorithm):
         """
         return self.tr(f"""
         <b>/!\ Doesn't work with multi-part geometry /!\</b>
-                       
+        Simplify a line or polygon using a look-ahead distance-based selection.
 
-        Simplify a line or polygon using a distance-based selection.
-        This algorithm was proposed by Ramer and by Douglas and Peucker. It is a line filtering algorithm, which means that it filters the vertices of the line (or polygon) to only retain the most important ones to preserve the shape of the line. The algorithm iteratively searches the most characteristics vertices of portions of the line and decides to retain or remove them given a distance threshold.
-        The algorithm tends to unsmooth geographic lines, and is rarely used to simplify geographic features. But it can be very useful to quickly filter the vertices of a line inside another algorithm.
-        
+        This algorithm, proposed by Lang, performs a simplification by defining a search region of a fixed number of vertices (look-ahead). It serves as a middle ground between local sequential filters and global algorithms like Douglas-Peucker.
+
+        The principle of the algorithm is to create a segment between the current vertex and a vertex further down the line. The perpendicular distances from all intermediate vertices to this segment are calculated. If any distance exceeds the tolerance, the search region is shrunk by moving the end vertex one step closer to the start, and the process repeats until all intermediate points fall within the tolerance. Once a valid segment is found, all intermediate points are removed, and the process restarts from the end of that segment.        
         <b> The process can be quite long with polygons </b>         
         <h3> Parameters:<h3>
         <ul>
-            <li> - <em>Threshold</em> : The distance threshold to remove the vertex from the line.</li>
-            <li> - <em>Preserve Topology</em> : If set to True, the algorithm will prevent invalid geometries from being created (checking for collapses, ring-intersections, etc). The trade-off is computational expensivity.</li>
+            <li> - <em>Tolerance</em> : The maximum allowed perpendicular distance between the original vertices and the simplified segment.</li>
+            <li> - <em>Look ahead</em> : The maximum number of vertices to consider in a single search window. Higher values allow for more aggressive simplification but increase computational cost.</li>
         </ul>
         For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.simplify_lang.html">help online</a>.
         """)
@@ -733,6 +730,8 @@ class LiOpenshaw(QgsProcessingAlgorithm):
             Simplify a line or a polygon using a regular grid.
             This algorithm proposed by Li & Openshaw simplifies lines based on a regular square grid. It first divide the line vertexes into groups partionned by a regular grid, then each group of vertexes is replaced by their centroid
             
+            <b>/!\ Doesn't work with multi-part geometry /!\</b>
+
             <h3> Parameters : </h3>
             <ul>
                 <li> - <em> Cell size </em> : The size of the regular grid used to divide the line.<li>
@@ -816,16 +815,16 @@ class LiOpenshaw(QgsProcessingAlgorithm):
         total = 100.0 / source.featureCount() if source.featureCount() else 0
         features = source.getFeatures()
 
-        for current, feature in enumerate(features):
-            # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
-            dp = gdf.copy()
-            for i in range(len(gdf)):
-                print(dp.loc[i,'geometry'])
-                dp.loc[i,'geometry'] = simplify_li_openshaw(list(gdf.geometry)[i],cell_size=cell_size, preserve_extremities=preserve_extremities)
-                res = dp.to_dict('records')
-                res = list_to_qgis_feature_2(res, source.fields())
-                # Update the progress bar
-                feedback.setProgress(int(current * total))
+        dp = gdf.copy()
+        for i in range(len(gdf)):
+            #print(dp.loc[i,'geometry'])
+            dp.loc[i,'geometry'] = simplify_li_openshaw(list(gdf.geometry)[i],cell_size=cell_size, preserve_extremities=preserve_extremities)
+            
+            # Update the progress bar
+            feedback.setProgress(int(i * total))
+
+        res = dp.to_dict('records')
+        res = list_to_qgis_feature_2(res, source.fields())
 
         # Create the output sink    
         (sink, dest_id) = self.parameterAsSink(
@@ -1054,19 +1053,19 @@ class RaposoSimplificationQGIS(QgsProcessingAlgorithm):
                     context, feature.fields(), QgsWkbTypes.Unknown, source.sourceCrs())
 
         else :
-            print("pas zero")
+            
             
             for current, feature in enumerate(features):
                 # Stop the algorithm if cancel button has been clicked
                 if feedback.isCanceled():
                     break
                 
-                print(f"{current}.{feature}")
+                
 
                 wkt = feature.geometry().asWkt()
                 shapely_geom = loads(wkt)
 
-                print(f"shapely_geom : {shapely_geom}")
+                
 
                 simplified = simplify_raposo(shapely_geom, initial_scale=initial_scale, final_scale=final_scale, centroid=centroid, tobler=tobler)
 
@@ -1269,7 +1268,7 @@ class ReumannWitkam(QgsProcessingAlgorithm):
             # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
             dp = gdf.copy()
             for i in range(len(gdf)):
-                print(f"i.{i}")
+                
                 dp.loc[i,'geometry'] = simplify_reumann_witkam(list(gdf.geometry)[i],tolerance=tolerance)
                 res = dp.to_dict('records')
                 res = list_to_qgis_feature_2(res, source.fields())
@@ -1505,9 +1504,9 @@ class VisvalingamWhyattQGIS(QgsProcessingAlgorithm):
             <h3> Parameters: </h3>
             <ul>
                 <li> - <em>Methode</em> : Choose the methode used for the calcul :</li>
-                    . Threshold (float) : The minimum triangle area to keep a vertex in the line. Higher values = more points kept (less aggressive simplification).
-                    . Number (int) : The target number of points to keep in the simplified line.
-                    . Ratio (float) : The ratio of points to keep (between 0 and 1). Example: 0.5 keeps approximately 50% of the original points.
+                    <span>&#160;</span> <span>&#160;</span>  ‣ Threshold (float) : The minimum triangle area to keep a vertex in the line. Higher values = more points kept (less aggressive simplification).
+                    <span>&#160;</span> <span>&#160;</span>  ‣ Number (int) : The target number of points to keep in the simplified line.
+                    <span>&#160;</span> <span>&#160;</span>  ‣ Ratio (float) : The ratio of points to keep (between 0 and 1). Example: 0.5 keeps approximately 50% of the original points.
                 <li> - <em>Value</em> : The value to use fot the calcul</li>
             </ul>
 
@@ -1783,6 +1782,9 @@ class Whirlpool(QgsProcessingAlgorithm):
             Simplify a line or polygon using an epsilon-circle based selection.
             This algorithm proposed by Dougenik and Chrisman performs a line simplification that removes spiky vertices while preserving the overall shape of the line. It works by iterating through the vertices of the line and removing those that are within a specified distance (epsilon) from the last kept vertex.
             This method is particularly effective at simplifying lines with many small, sharp angles, such as rivers or coastlines, while maintaining the general form of the line.
+            
+            <b>/!\ Doesn't work with multi-part geometry /!\</b>
+            
             <h3> Parameters: </h3>
             <ul>
                 <li> - <em>Thresold</em> : The minimum epsilon-distance to consider a vertex to be removed. Higher values = fewer points kept (more aggressive simplification).</li>
@@ -1860,7 +1862,7 @@ class Whirlpool(QgsProcessingAlgorithm):
         # Perform the CartAGen algorithm and convert the result to a list of QgsFeature()
             dp = gdf.copy()
             for i in range(len(gdf)):
-                print(f"{i}.{dp.loc[i,'geometry']}")
+                
                 dp.loc[i,'geometry'] = simplify_whirlpool(list(gdf.geometry)[i],threshold=threshold)
                 res = dp.to_dict('records')
                 res = list_to_qgis_feature_2(res, source.fields())
