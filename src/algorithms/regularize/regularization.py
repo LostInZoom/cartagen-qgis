@@ -208,14 +208,14 @@ class BuildingFER (QgsProcessingAlgorithm):
             listBuil = []
 
             batRegularizeFer = regularize_building_fer(gs['geometry'].loc[i], length=length, area=area)            
-            listBuil.append(batRegularizeFer)
+            #listBuil.append(batRegularizeFer)
 
-            gs.loc[i,'geometry'] = listBuil
+            gs.loc[i,'geometry'] = batRegularizeFer
 
         feedback.setProgress(80)
 
         for row in gs.iterrows():
-            if row[1]['geometry']== None :
+            if row[1]['geometry'] == None:
                 gs = gs.drop(labels=row[0], axis='index')
 
         res = gs.to_dict(orient='records')
@@ -325,8 +325,8 @@ class BuildingRectangle(QgsProcessingAlgorithm):
                 <li>- <em> Factor </em> : The scaling factor to apply.</li>
                 <li>- <em> Method </em> : The method to calculate the rectangle:<li> \n
                 <ul>      
-                    <li> . <em> 'mbr' </em> : calculate the minimum rotated bounding rectangle.<li> \n
-                    <li> . <em> 'mbtr' </em> : calculate minimum rotated bounding touching rectangle. It is the same as the mbr but the rectangle and the polygon must have at least one side in common. </li>
+                    <span>&#160;</span> <span>&#160;</span>  ‣ mbr </em> : calculate the minimum rotated bounding rectangle. \n
+                    <span>&#160;</span> <span>&#160;</span>  ‣ mbtr </em> : calculate minimum rotated bounding touching rectangle. It is the same as the mbr but the rectangle and the polygon must have at least one side in common. 
                 </ul>
             </ul>
                        
@@ -383,6 +383,7 @@ class BuildingRectangle(QgsProcessingAlgorithm):
 
         import geopandas as gpd
         import pandas
+        from shapely import MultiPolygon
         from cartagen import regularize_building_rectangle
         from cartagen4qgis.src.tools import list_to_qgis_feature_2
 
@@ -401,14 +402,19 @@ class BuildingRectangle(QgsProcessingAlgorithm):
         gs = gdf.copy()
         for i in range(len(gdf)):
             geommultiple = gs['geometry'].loc[i]
-            listGeomSimple = list(geommultiple.geoms)
+
+            try:
+                listGeomSimple = list(geommultiple.geoms)
+            except:
+                listGeomSimple = [geommultiple]
+            
             listeTraitee = []
 
             for ligne in listGeomSimple:
                 ligneTraitee = regularize_building_rectangle(ligne, factor=factor, method=dicoMethods[method])
                 listeTraitee.append(ligneTraitee)
 
-            gs.loc[i,'geometry'] = listeTraitee
+            gs.loc[i,'geometry'] = MultiPolygon(listeTraitee)
 
         res = gs.to_dict('records')
         res = list_to_qgis_feature_2(res, source.fields())
@@ -556,6 +562,7 @@ class BuildingRegression(QgsProcessingAlgorithm):
 
         import geopandas as gpd
         import pandas
+        from shapely import MultiPolygon
         from cartagen import regularize_building_regression
         from cartagen4qgis.src.tools import list_to_qgis_feature, list_to_qgis_feature_2
 
@@ -572,14 +579,18 @@ class BuildingRegression(QgsProcessingAlgorithm):
         gs = gdf.copy()
         for i in range(len(gdf)):
             geommultiple = gs['geometry'].loc[i]
-            listGeomSimple = list(geommultiple.geoms)
+            try:
+                listGeomSimple = list(geommultiple.geoms)
+            except:
+                listGeomSimple = [geommultiple]
+
             listeTraitee = []
 
             for ligne in listGeomSimple:
                 ligneTraitee = regularize_building_regression(ligne, sigma=sigma)
                 listeTraitee.append(ligneTraitee)
 
-            gs.loc[i,'geometry'] = listeTraitee
+            gs.loc[i,'geometry'] = MultiPolygon(listeTraitee)
 
         res = gs.to_dict('records')
         res = list_to_qgis_feature_2(res, source.fields())
