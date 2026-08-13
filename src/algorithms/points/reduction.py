@@ -154,9 +154,9 @@ class ReduceKmeans(QgsProcessingAlgorithm):
                 <li> - <em>Ratio</em> : a value between 0 (all points are removed) and 1 (all points are kept).</li>
                 <li> - <em>Mode</em> : there are three available modes:</li>
                 <ul>
-                    <li> . 'selection': inside the cluster, only point with the largest value in the chosen field is retained. This option requires the field parameter to be provided. </li>
-                    <li> . 'simplification': the point retained in the cluster is the closest to the centroid of the cluster. </li>
-                    <li> . 'aggregation': the points are all aggregated to the centroid of the cluster. The count of point is added as a new attribute. If a column name is provided, also adds the sum of the attribute.</li>
+                    <li>   <span>&#160;</span> <span>&#160;</span>  ‣ selection: inside the cluster, only point with the largest value in the chosen field is retained. This option requires the field parameter to be provided. </li>
+                    <li>   <span>&#160;</span> <span>&#160;</span> ‣ simplification: the point retained in the cluster is the closest to the centroid of the cluster. </li>
+                    <li>   <span>&#160;</span> <span>&#160;</span> ‣ aggregation: the points are all aggregated to the centroid of the cluster. The count of point is added as a new attribute. If a column name is provided, also adds the sum of the attribute.</li>
                 </ul>
 
             </ul>
@@ -411,6 +411,11 @@ class ReduceLabelgrid(QgsProcessingAlgorithm):
                 <li> - <em>Height</em> : height of the grid cells.</li>
                 <li> - <em>Shape</em> : shape of the grid cells, can be 'square', 'diamond', 'hexagonal'.</li>
                 <li> - <em>Mode</em> : there are three available modes:</li>
+                <ul>
+                    <li>   <span>&#160;</span> <span>&#160;</span>  ‣ selection: for one cell, the algorithm retains the point with the largest value in the chosen column. This option requires the field parameter to be provided.  </li>
+                    <li>   <span>&#160;</span> <span>&#160;</span> ‣ simplification: the point retained in the cell is the closest to the center of the cell. </li>
+                    <li>   <span>&#160;</span> <span>&#160;</span> ‣ aggregation: the points are all aggregated to the centroid of the cell. The count of point is added as a new attribute. If a field name is provided, also adds the sum of the attribute. </li>
+                </ul>
                 <li> - <em>Field name</em> : name of the field to use.</li>
                 <li> - <em>Grid</em> : if set to True, returns the points and the grid. In aggregation mode, the returned grid cells contain the count/sum of points</li>
             </ul>
@@ -719,9 +724,9 @@ class ReduceQuadtree(QgsProcessingAlgorithm):
                 <li> - <em>Depth</em> : the maximum depth of the quadtree. This acts as a selector for the wanted degree of generalisation. The lower the value, the more generalised the point set will be.</li>
                 <li> - <em>Mode</em> : there are three available modes:</li>
                 <ul>
-                    <li>. ’selection’: for one cell, the algorithm retains the point with the largest value in the chosen column, weighted by the depth of the point. This option requires the column parameter to be provided. </li>
-                    <li>. ’simplification’: the point retained in the cell is the closest to the center of the cell. </li>
-                    <li>. ’aggregation’: the points are all aggregated to the centroid of the cell. The count of point is added as a new attribute. If a column name is provided, also adds the sum of the attribute.</li>
+                    <span>&#160;</span> <span>&#160;</span>  ‣ selection: for one cell, the algorithm retains the point with the largest value in the chosen column, weighted by the depth of the point. This option requires the column parameter to be provided.
+                    <span>&#160;</span> <span>&#160;</span>  ‣ simplification: the point retained in the cell is the closest to the center of the cell.
+                    <span>&#160;</span> <span>&#160;</span>  ‣ aggregation: the points are all aggregated to the centroid of the cell. The count of point is added as a new attribute. If a column name is provided, also adds the sum of the attribute.
                 </ul>
                 <li> - <em>Field name</em> : name of the field to use.</li>
                 <li> - <em>Quadtree</em> : if set to True, returns the reduced points and the quadtree.</li>
