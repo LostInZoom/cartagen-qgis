@@ -47,6 +47,8 @@ class NetworkFacesQGIS(QgsProcessingAlgorithm):
 
     OUTPUT = 'OUTPUT'
     INPUT = 'INPUT'
+    
+    CONVEX_HULL_BOOL = 'CONVEX_HULL_BOOL'
 
     def initAlgorithm(self, config):
         """
@@ -63,6 +65,15 @@ class NetworkFacesQGIS(QgsProcessingAlgorithm):
                 optional=False
             )
         )
+        
+        convex_hull_bool = QgsProcessingParameterBoolean(
+                self.CONVEX_HULL_BOOL,
+                self.tr('Add convex hull ?'),
+                defaultValue=True,
+                optional=True
+            )
+        convex_hull_bool.setFlags(convex_hull_bool.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(convex_hull_bool)
 
         # We add a feature sink in which to store our processed features (this
         # usually takes the form of a newly created vector layer when the
@@ -70,7 +81,7 @@ class NetworkFacesQGIS(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
-                self.tr('Faces :')
+                self.tr('Network Faces')
             )
         )
 
@@ -86,6 +97,8 @@ class NetworkFacesQGIS(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsLayerList(parameters, self.INPUT, context)
+        convex_hull = self.parameterAsBoolean(parameters, self.CONVEX_HULL_BOOL, context)
+        
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
                 context, source[0].fields(), QgsWkbTypes.Polygon, source[0].sourceCrs())
 
@@ -98,7 +111,7 @@ class NetworkFacesQGIS(QgsProcessingAlgorithm):
                 features.append(shapely_geom)
             network_list.append(features)
 
-        partitions = network_faces(*network_list)
+        partitions = network_faces(*network_list,convex_hull=convex_hull)
 
         for polygon in partitions:
             result = QgsFeature()
@@ -173,6 +186,15 @@ class NetworkFacesQGIS(QgsProcessingAlgorithm):
             Calculates the faces of one or multiple networks.
 
             This function is often called polygonize. It creates polygons in place of a network of lines.
+            
+            <h3> Parameters : </h3>
+                       
+            <ul>
+                <li> - <em> Convex hull </em> : If True, add the convex hull of the provided list of lines to the network, thus including the borders. </li>
+               
+            </ul>
+            
+            For more see <a href=https://cartagen.readthedocs.io/en/latest/reference/cartagen.network_faces.html#cartagen.network_faces">help online</a>.
         """)
         return helpstring
 

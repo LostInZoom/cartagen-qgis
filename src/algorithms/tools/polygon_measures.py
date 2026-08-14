@@ -636,13 +636,13 @@ class PolygonOrientation (QgsProcessingAlgorithm):
         <ul>
                 <li> - <em>Method </em> : The method to calculate the orientation: </li>
                 <ul>
-                    <li>. ’primary’ calculates the orientation of the longest side of the provided polygon.</li>
+                   <span>&#160;</span> <span>&#160;</span>  ‣ primary calculates the orientation of the longest side of the provided polygon.
 
-                    <li>. ’mbr’ calculates the orientation of the long side of the minimum rotated bounding rectangle.</li>
+                   <span>&#160;</span> <span>&#160;</span>  ‣ mbr calculates the orientation of the long side of the minimum rotated bounding rectangle.
 
-                    <li>. ’mbtr’ calculates the orientation of the long side of the minimum rotated bounding touching rectangle. It is the same as the mbr but the rectangle and the polygon must have at least one side in common.</li>
+                   <span>&#160;</span> <span>&#160;</span>  ‣ mbtr calculates the orientation of the long side of the minimum rotated bounding touching rectangle. It is the same as the mbr but the rectangle and the polygon must have at least one side in common.
 
-                    <li>. ’swo’ or statistical weighted orientation described in Duchêne, calculates the orientation of a polygon using the statistical weighted orientation. This method relies on the length and orientation of the longest and second longest segment between two vertexes of the polygon.</li>
+                    <span>&#160;</span> <span>&#160;</span>  ‣ swo or statistical weighted orientation described in Duchêne, calculates the orientation of a polygon using the statistical weighted orientation. This method relies on the length and orientation of the longest and second longest segment between two vertexes of the polygon.
                 </ul>
         </ul>
 

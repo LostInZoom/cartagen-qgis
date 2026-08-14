@@ -222,6 +222,7 @@ class StrokesRoads(QgsProcessingAlgorithm):
             Calculate strokes inside a road network.
             This method computes the strokes in a Stroke network using a loop on network features, and updates its strokes attribute.
             
+            <b>/!\ Doesn't work with multipart geometry /!\</b>
             <h3> Parameters: </h3>
             <ul>
                 <li> - <em>AttributeNames</em> : list of attribute names to be used as a criteria for continuity.</li>
