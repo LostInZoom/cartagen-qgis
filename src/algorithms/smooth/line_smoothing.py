@@ -150,9 +150,9 @@ class CatmullRomSmoothing(QgsProcessingAlgorithm):
                 <li> - <em>Subdivisions</em> : Number of interpolated points between each pair of control points. Higher values produce smoother curves.</li>
                 <li> - <em>Alpha</em> : Parameterization type:</li>
                 <ul>
-                    <li>  . Uniform parameterization </li>
-                    <li>  . Centripetal parameterization (recommended, prevents loops) </li>
-                    <li>  . Chordal parameterization </li>
+                    <span>&#160;</span> <span>&#160;</span>  ‣ Uniform parameterization
+                    <span>&#160;</span> <span>&#160;</span>  ‣ Centripetal parameterization (recommended, prevents loops)
+                    <span>&#160;</span> <span>&#160;</span>  ‣ Chordal parameterization
                 <ul>
             </ul>
 
@@ -218,7 +218,7 @@ class CatmullRomSmoothing(QgsProcessingAlgorithm):
         import pandas
         from cartagen import smooth_catmull_rom
         from cartagen4qgis.src.tools import list_to_qgis_feature_2
-        from shapely import Polygon
+        from shapely import Polygon, MultiPolygon, MultiLineString
         from shapely.wkt import loads
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
@@ -238,7 +238,7 @@ class CatmullRomSmoothing(QgsProcessingAlgorithm):
 
         #Using CartAGen algorithm and transforming the result to a list of QgsFeature()
         #Depending on the type of geometry of the input data
-        if source.wkbType().name == 'Polygon':
+        if source.wkbType().name == 'Polygon' or source.wkbType().name == 'LineString':
             gs = gdf.copy()
             for i in range(len(gdf)):
                 try:
@@ -256,17 +256,26 @@ class CatmullRomSmoothing(QgsProcessingAlgorithm):
 
             for i in range(len(gdf)):
                 geommultiple = gs.loc[i,'geometry']
-                listGeomSimple = list(geommultiple.geoms)
+                    
+                try:
+                    listGeomSimple = list(geommultiple.geoms)
+                except:
+                    listGeomSimple = [geommultiple]
                 listeTraitee = []
 
                 for ligne in listGeomSimple:
                     ligneTraitee = smooth_catmull_rom(ligne, alpha=dico[alpha], subdivisions=subdivisions)
                     listeTraitee.append(ligneTraitee)
 
+                if listeTraitee[0].type == 'Polygon':
+                    gs.loc[i,'geometry'] = MultiPolygon(listeTraitee)
+                else:
+                    gs.loc[i,'geometry'] = MultiLineString(listeTraitee)
+                   
+
                 # Update the progress bar
                 feedback.setProgress(int(i * total))
-
-                gs.loc[i,'geometry'] = listeTraitee
+                
             
             res = gs.to_dict('records')
             res = list_to_qgis_feature_2(res,source.fields())
@@ -437,7 +446,7 @@ class ChaikinSmoothing(QgsProcessingAlgorithm):
         import pandas
         from cartagen import smooth_chaikin
         from cartagen4qgis.src.tools import list_to_qgis_feature_2
-        from shapely import Polygon
+        from shapely import Polygon, MultiPolygon, LineString, MultiLineString
         from shapely.wkt import loads
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
@@ -456,7 +465,7 @@ class ChaikinSmoothing(QgsProcessingAlgorithm):
 
         #Using CartAGen algorithm and transforming the result to a list of QgsFeature()
         #Depending on the type of geometry of the input data
-        if source.wkbType().name == 'Polygon':
+        if source.wkbType().name == 'Polygon' or source.wkbType().name == 'LineString':
 
             gs = gdf.copy()
             for i in range(len(gdf)):
@@ -470,15 +479,30 @@ class ChaikinSmoothing(QgsProcessingAlgorithm):
             gs = gdf.copy()
             for i in range(len(gdf)):
                 geommultiple = gs.loc[i,'geometry']
-                listGeomSimple = list(geommultiple.geoms)
+                    
+                try:
+                    listGeomSimple = list(geommultiple.geoms)
+                except:
+                    listGeomSimple = [geommultiple]
                 listeTraitee = []
 
                 for ligne in listGeomSimple:
                     ligneTraitee = smooth_chaikin(ligne, iterations=iterations, keep_ends=keep_ends)
                     listeTraitee.append(ligneTraitee)
-                    feedback.setProgress(int(i* total))
 
-                gs.loc[i,'geometry'] = listeTraitee
+                if listeTraitee[0].type == 'LineString':
+                    if len(listeTraitee) > 1:
+                        gs.loc[i,'geometry'] = MultiLineString(listeTraitee)
+                    else:
+                        gs.loc[i,'geometry'] = listeTraitee
+                else:
+                    if len(listeTraitee) > 1:
+                        gs.loc[i,'geometry'] = MultiPolygon(listeTraitee)
+                    else:
+                        gs.loc[i,'geometry'] = listeTraitee
+
+                # Update the progress bar
+                feedback.setProgress(int(i * total))
 
             res = gs.to_dict('records')
             res = list_to_qgis_feature_2(res,source.fields())
@@ -568,7 +592,7 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
         should be at most a single sentence, e.g. “Converts 2D features to 3D by 
         sampling a DEM raster.”
         """
-        first_line = self.shortHelpString().strip().splitlines()[3]
+        first_line = self.shortHelpString().strip().splitlines()[2]
         description = self.tr(first_line)
         
         return(description)
@@ -580,7 +604,6 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
         parameters and outputs associated with it..
         """
         helpstring = """
-            <b>/!\Doesn't work with multipart geometry/!\</b>
             <b>/!\You need to drop Z and M for the algorithm to function/!\</b>
 
             Smooth a line and attenuate its inflexion points.
@@ -592,7 +615,7 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
                 <li> - <em>Sample</em> : The length in meter between each nodes after resampling the geometry. If not provided, the sample is derived from the geometry and is the average distance between each consecutive vertex.</li>
                 <li> - <em>Densify</em> : Whether the resulting geometry should keep the new vertex density. Default to True.</li>
             </ul>
-            For more see <a href=" https://cartagen.readthedocs.io/en/latest/reference/cartagen.smooth_gaussian.html#cartagen.smooth_gaussian">help online</a>.
+            For more see <a href="https://cartagen.readthedocs.io/en/latest/reference/cartagen.smooth_gaussian.html#cartagen.smooth_gaussian">help online</a>.
         """
         
         return self.tr(helpstring)
@@ -663,7 +686,7 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
         import pandas
         from cartagen import smooth_gaussian
         from cartagen4qgis.src.tools import list_to_qgis_feature_2
-        from shapely import Polygon
+        from shapely import Polygon, MultiPolygon, MultiLineString, LineString
         from shapely.wkt import loads
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
@@ -686,14 +709,34 @@ class GaussianSmoothing(QgsProcessingAlgorithm):
         
         gs = gdf.copy()
  
-        if sample == 0:
-            for i in range(len(gdf)):
-                gs.loc[i,'geometry'] = smooth_gaussian(list(gs.geometry)[i], sigma=sigma, densify=densify)
-                feedback.setProgress(int(i* total))
-        else:
-            for i in range(len(gdf)):
-                gs.loc[i,'geometry'] = smooth_gaussian(list(gs.geometry)[i], sigma=sigma, sample=sample, densify=densify)
-                feedback.setProgress(int(i* total))
+
+                
+        for i in range(len(gdf)):
+            geommultiple = gs.loc[i,'geometry']
+                    
+            try:
+                listGeomSimple = list(geommultiple.geoms)
+            except:
+                listGeomSimple = [geommultiple]
+            listeTraitee = []
+
+            for ligne in listGeomSimple:
+                ligneTraitee = smooth_gaussian(ligne, sigma=sigma, densify=densify)
+                listeTraitee.append(ligneTraitee)
+                    
+                    
+            if listeTraitee[0].type == 'LineString':
+                if len(listeTraitee) > 1:
+                    gs.loc[i,'geometry'] = MultiLineString(listeTraitee)
+                else:
+                    gs.loc[i,'geometry'] = listeTraitee[0]
+            else:
+                if len(listeTraitee) > 1:
+                    gs.loc[i,'geometry'] = MultiPolygon(listeTraitee)
+                else:
+                    gs.loc[i,'geometry'] = listeTraitee[0]
+
+            feedback.setProgress(int(i* total))
 
         res = gs.to_dict('records')
         res = list_to_qgis_feature_2(res,source.fields())
@@ -786,7 +829,7 @@ class SmoothPlatre (QgsProcessingAlgorithm):
         should be at most a single sentence, e.g. “Converts 2D features to 3D by 
         sampling a DEM raster.”
         """
-        first_line = self.shortHelpString().strip().splitlines()[3]
+        first_line = self.shortHelpString().strip().splitlines()[2]
         description = self.tr(first_line)
         
         return(description)
@@ -798,8 +841,7 @@ class SmoothPlatre (QgsProcessingAlgorithm):
         parameters and outputs associated with it..
         """
         helpstring = """
-            <b>/!\Doesn't work with multipart geometry/!\</b>
-            <b>/!\You need to drop Z and M for the algorithm to function/!\</b>
+            <b>/!\You need to drop Z and M for the algorithm to work/!\</b>
 
             Smooth a line and preserve the integrity of sharp turns.
             The PLATRE algorithm was created by Emmanuel Fritsch to attenuate minor bends in a polyline while preserving the position and integrity of the sharpest turns. Unlike simple coordinate-based filters, it operates on the line’s intrinsic geometry (curvature/angle) to maintain structural consistency.
@@ -831,7 +873,7 @@ class SmoothPlatre (QgsProcessingAlgorithm):
         input = QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr('The line to smooth :'),
-                [QgsProcessing.TypeVectorLine]
+                [QgsProcessing.TypeVectorLine,QgsProcessing.TypeVectorPolygon]
             )
         self.addParameter(input)
 
@@ -867,6 +909,7 @@ class SmoothPlatre (QgsProcessingAlgorithm):
         """
         import geopandas as gpd
         import pandas
+        from shapely import MultiPolygon, MultiLineString
         from cartagen import smooth_platre
         from cartagen4qgis.src.tools import list_to_qgis_feature_2
 
@@ -889,9 +932,30 @@ class SmoothPlatre (QgsProcessingAlgorithm):
 
         dp = gdf.copy()
         for i in range(len(gdf)):
-            dp.loc[i,'geometry'] = smooth_platre(list(gdf.geometry)[i], sigma=sigma,curvature=curvature)
-            # Update the progress bar
-            feedback.setProgress(int(i * total))
+            geommultiple = dp.loc[i,'geometry']
+                    
+            try:
+                listGeomSimple = list(geommultiple.geoms)
+            except:
+                listGeomSimple = [geommultiple]
+            listeTraitee = []
+
+            for ligne in listGeomSimple:
+                ligneTraitee = smooth_platre(ligne, sigma=sigma,curvature=curvature)
+                listeTraitee.append(ligneTraitee)
+
+            if listeTraitee[0].type == 'LineString':
+                if len(listeTraitee) > 1:
+                    dp.loc[i,'geometry'] = MultiLineString(listeTraitee)
+                else:
+                    dp.loc[i,'geometry'] = listeTraitee[0]
+            else:
+                if len(listeTraitee) > 1:
+                    dp.loc[i,'geometry'] = MultiPolygon(listeTraitee)
+                else:
+                    dp.loc[i,'geometry'] = listeTraitee
+                    
+            feedback.setProgress(int(i* total))
         res = dp.to_dict('records')
         res = list_to_qgis_feature_2(res,source.fields())
 
@@ -1238,7 +1302,7 @@ class SmoothTaubin (QgsProcessingAlgorithm):
         should be at most a single sentence, e.g. “Converts 2D features to 3D by 
         sampling a DEM raster.”
         """
-        first_line = self.shortHelpString().strip().splitlines()[2]
+        first_line = self.shortHelpString().strip().splitlines()[1]
         description = self.tr(first_line)
         
         return(description)
@@ -1250,7 +1314,6 @@ class SmoothTaubin (QgsProcessingAlgorithm):
         parameters and outputs associated with it..
         """
         helpstring = f"""
-        <b>/!\Doesn't work with multipart geometry, use QGis tool in beforehand. /!\</b>
 
         Smooth a line or polygon and prevent shrinkage.
         This algorithm was proposed by Taubin. It is a two-step low-pass filter that preserves volume and prevents shrinkage. It applies alternating expansion and contraction steps using lambda (smoothing) and mu (inflation) parameters. Accept Multi geometries. If a polygon is provided, it also applies the smoothing to its holes using the same parameters. This implementation is a translation of the C++ implementation available here.
@@ -1334,6 +1397,7 @@ class SmoothTaubin (QgsProcessingAlgorithm):
         """
         import geopandas as gpd
         import pandas
+        from shapely import MultiPolygon, MultiLineString
         from cartagen import smooth_taubin
         from cartagen4qgis.src.tools import list_to_qgis_feature_2
 
@@ -1355,7 +1419,29 @@ class SmoothTaubin (QgsProcessingAlgorithm):
 
         dp = gdf.copy()
         for i in range(len(gdf)):
-            dp.loc[i,'geometry'] = smooth_taubin (list(gdf.geometry)[i], iterations=iterations, smoothing=smoothing, inflation=inflation)
+            geommultiple = dp.loc[i,'geometry']
+                    
+            try:
+                listGeomSimple = list(geommultiple.geoms)
+            except:
+                listGeomSimple = [geommultiple]
+            listeTraitee = []
+
+            for ligne in listGeomSimple:
+                ligneTraitee = smooth_taubin(ligne, iterations=iterations, smoothing=smoothing, inflation=inflation)
+                listeTraitee.append(ligneTraitee)
+
+         
+            if listeTraitee[0].type == 'LineString':
+                if len(listeTraitee) > 1:
+                    dp.loc[i,'geometry'] = MultiLineString(listeTraitee)
+                else:
+                    dp.loc[i,'geometry'] = listeTraitee[0]
+            else:
+                if len(listeTraitee) > 1:
+                    dp.loc[i,'geometry'] = MultiPolygon(listeTraitee)
+                else:
+                    dp.loc[i,'geometry'] = listeTraitee
 
             # Update the progress bar
             feedback.setProgress(int(i * total))
