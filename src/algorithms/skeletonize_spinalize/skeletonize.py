@@ -350,8 +350,8 @@ class SkelArtificial(QgsProcessingAlgorithm):
                 <li> - <em>Entries</em> : The entry points of the skeleton.</li>
                 <li> - <em>Connection</em> : It can be :</li>
                     <ul>
-                        <li>. <em>'joint'</em>, which forces the entry point to connect to the closest joint</li>
-                        <li>. <em>'interior'</em>, which first look if there is an interior triangle inside the triangulation and connect directly the entry point to its skeleton joint. If no interior triangle is found, apply ‘joint’ connection instead.</li>
+                        <span>&#160;</span> <span>&#160;</span>  ‣ joint, which forces the entry point to connect to the closest joint
+                        <span>&#160;</span> <span>&#160;</span>  ‣ interior, which first look if there is an interior triangle inside the triangulation and connect directly the entry point to its skeleton joint. If no interior triangle is found, apply ‘joint’ connection instead.
                     </ul>
                 <li> - <em>Threshold range</em> : This value is only used for inner triangles calculated by the Delaunay triangulation. If two of the length ratio between each pair of edges (of an inner triangle) is outside the given range, the skeleton uses the middle of the line connecting the two center of the longest lines of the triangle, else it uses the centroid of the triangle.</li>
             </ul>
@@ -593,6 +593,9 @@ class SkelNetwork(QgsProcessingAlgorithm):
             This function first creates an artificial TIN skeleton by enforcing entry points derived from the provided network (the entry points are the extremities of the provided network touching the polygon ring). Then the network is blended with the skeleton and an optional gaussian smoothing is apply.
             This version is inspired by the enhanced TIN skeleton proposed by Wang
             
+            <b>/!\ Do not use multi-part geometry /!\</b>
+
+            <b>/!\ This version of the algorithm drops attributes /!\</b>
             <h3> Parameters: </h3>
             <ul>
                 <li> - <em>Network</em> : The network touching the ring of the polygon.</li>
@@ -701,6 +704,8 @@ class SkelNetwork(QgsProcessingAlgorithm):
         network = gpd.GeoDataFrame.from_features(network.getFeatures())
 
         sigma = self.parameterAsDouble(parameters, self.SIGMA, context)
+        if sigma == 0:
+            sigma = None
         blend_smoothing = self.parameterAsBoolean(parameters, self.BLEND_SMOOTHING, context)
         low_bound = self.parameterAsDouble(parameters, self.LOW_BOUND, context)
         up_bound = self.parameterAsDouble(parameters, self.UP_BOUND, context)        
@@ -711,9 +716,22 @@ class SkelNetwork(QgsProcessingAlgorithm):
         listSkel = []
         for index in range(len(gs)):
             skeletonized = skeletonize_network(gdf.loc[index,'geometry'], network=network, sigma=sigma, blend_smoothing=blend_smoothing, threshold_range=(low_bound, up_bound))
-            listSkel.append(skeletonized[0])
-
-        gs = gs.assign(geometry=listSkel)
+            
+            output_lines = gpd.GeoDataFrame(geometry=[line['geometry'] for line in skeletonized])
+            intersect_poly = output_lines.intersects(gdf.loc[index,'geometry'])
+            to_drop = []
+            for i in intersect_poly.keys():
+                if not intersect_poly[i]:
+                    to_drop.append(i)
+            
+            output_lines = output_lines.drop(to_drop)
+            listSkel += [geom for geom in output_lines['geometry']]
+            #print(len(listSkel))
+            
+        #print(listSkel)
+        gs = gpd.GeoDataFrame(geometry=listSkel)
+        #print(listSkel)
+        #gs = pd.concat(listSkel)
         res = gs.to_dict('records')
         res = list_to_qgis_feature_2(res, source.fields())
 
