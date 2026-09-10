@@ -91,7 +91,11 @@ class CartAGen4QGISPlugin(object):
                 self.initialized = False
         except Exception as e:
             # Ignorer les erreurs au déchargement
-            pass
+            QgsMessageLog.logMessage(
+                    "Unable to unload CartAGen plugin. Try restart QGIS.",
+                    'CartAGen',
+                    Qgis.Critical
+                )
     
     # ========== GESTION DES DÉPENDANCES ==========
     
@@ -113,134 +117,32 @@ class CartAGen4QGISPlugin(object):
         """Display a prompt to ask for the installation of cartagen"""
         try:
             from qgis.PyQt.QtWidgets import QMessageBox
+            from qgis.core import Qgis
             
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Icon.Information)
-            msg.setWindowTitle("Missing dependencies for CartAGen")
-            msg.setText("This plugin requires the CartAGen Python library to properly work.")
-            
-            msg.setInformativeText(
-                f"CartAGen will be installed within the Python environment used by QGIS.\n\n"
-                f"Proceed?"
-            )
-            
-            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            msg.setDefaultButton(QMessageBox.StandardButton.Yes)
-            
-            reply = msg.exec()
-            
-            if reply == QMessageBox.StandardButton.Yes:
-                self.install_dependencies()
-            else:
-                QMessageBox.warning(
-                    None,
-                    "Installation cancelled",
-                    "CartAGen won't work without the proper dependencies.\n"
-                    "You can try again later by reloading the plugin."
-                )
+            if str(Qgis.QGIS_VERSION_INT)[0] == '4':
+                msgBox = QMessageBox()
+                msgBox.setIcon(QMessageBox.Icon.Information)
+                msgBox.setText("""CartAGen won't work without the proper dependencies.<br>
+                                         You must manually install the CartAGen Python library.<br>
+                                         Tutorial is available on our <a href="https://cartagen.readthedocs.io/en/latest/qgis.html">documentation page</a> !""")
+                msgBox.setWindowTitle("Missing CartAGen library")
+                msgBox.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msgBox.exec()
+                
+            elif str(Qgis.QGIS_VERSION_INT)[0] == '3':
+                msgBox = QMessageBox()
+                msgBox.setIcon(QMessageBox.Information)
+                msgBox.setText("""CartAGen won't work without the proper dependencies.<br>
+                                         You must manually install the CartAGen Python library.<br>
+                                         Tutorial is available on our <a href="https://cartagen.readthedocs.io/en/latest/qgis.html">documentation page</a> !""")
+                msgBox.setWindowTitle("Missing CartAGen library")
+                msgBox.setStandardButtons(QMessageBox.Ok)
+                msgBox.exec()
+      
         except Exception as e:
             from qgis.core import QgsMessageLog, Qgis
             QgsMessageLog.logMessage(
                 f"There was an error during the dialog display: {str(e)}",
-                'CartAGen',
-                Qgis.Critical
-            )
-    
-    def install_dependencies(self):
-        """Install deendencies with a progress bar"""
-        
-        try:
-            from qgis.PyQt.QtWidgets import QProgressDialog, QMessageBox, QApplication
-            from qgis.PyQt.QtCore import Qt
-            from qgis.core import QgsMessageLog, Qgis
-            
-            progress = QProgressDialog(
-                "Installing dependencies...\n"
-                "This can take several minutes.",
-                None, 0,
-                0  # Undefined mode
-            )
-            progress.setWindowTitle("Dependencies installation")
-            progress.setWindowModality(Qt.WindowModality.WindowModal)
-            progress.setCancelButton(None)  # deactivate cancel
-            progress.show()
-            QApplication.processEvents()
-
-            # Check if sys.executable points to a python executable
-            python_executable = sys.executable
-
-            # Function to check if a given path is a python executable
-            def is_python_executable(path):
-                if not os.path.isfile(path):
-                    return False
-                try:
-                    result = subprocess.run(
-                        [path, "--version"],
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        timeout=5,
-                    )
-                    return result.returncode == 0 and result.stdout.decode().startswith("Python")
-                except (OSError, subprocess.TimeoutExpired, subprocess.SubprocessError):
-                    return False
-            
-            # If not, try to find a python executable depending on the platform
-            if not is_python_executable(python_executable):
-                # if macOS
-                if sys.platform == "darwin":
-                    python_executable = os.path.join(os.path.dirname(sys.executable), "python")
-            
-            # Prepare the installation command
-            cmd = [ python_executable, '-m', 'pip', 'install', '--user', 'cartagen' ]
-            
-            # Installation using pip
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            # End progress bar
-            progress.close()
-            
-            if result.returncode == 0:
-                QMessageBox.information(
-                    None,
-                    "Installation successful",
-                    "Dependencies have been installed successfully.\n"
-                    "Please restart QGIS before using the plugin."
-                )
-                QgsMessageLog.logMessage(
-                    "Dependencies installed successfully",
-                    'CartAGen',
-                    Qgis.Success
-                )
-            else:
-                raise Exception(result.stderr)
-                
-        except subprocess.TimeoutExpired:
-            if 'progress' in locals():
-                progress.close()
-            QMessageBox.critical(
-                None,
-                "Installation error",
-                "The installation process took too long and was interupted.\n"
-                "Check your internet connection."
-            )
-            QgsMessageLog.logMessage(
-                "Timeout during dependencies installation",
-                'CartAGen',
-                Qgis.Critical
-            )
-            
-        except Exception as e:
-            if 'progress' in locals():
-                progress.close()
-            error_msg = str(e)
-            QMessageBox.critical(
-                None,
-                "Intallation error",
-                f"An error occured during the installation:\n\n{error_msg}\n\n"
-                f"You can try to manually install dependencies using the following command within QGIS's Python environment:\n"
-                f"pip install --user cartagen"
-            )
-            QgsMessageLog.logMessage(
-                f"Installation error: {error_msg}",
                 'CartAGen',
                 Qgis.Critical
             )
